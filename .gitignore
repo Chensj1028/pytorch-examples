@@ -23,3 +23,8 @@ docs/venv
 # development
 .vscode
 **/.DS_Store
+
+# Local MNIST environment and generated outputs
+/.venv/
+/mnist/mnist_cnn.pt
+/mnist/training.log

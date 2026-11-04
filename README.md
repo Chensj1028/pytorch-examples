@@ -1,5 +1,7 @@
 # PyTorch Examples
 
+[简体中文](README.zh-CN.md) · [MNIST 入门说明](入门说明.md)
+
 https://pytorch.org/examples/
 
 `pytorch/examples` is a repository showcasing examples of using [PyTorch](https://github.com/pytorch/pytorch). The goal is to have curated, short, few/no dependencies _high quality_ examples that are substantially different from each other that can be emulated in your existing work.
