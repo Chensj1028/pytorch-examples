@@ -1,6 +1,6 @@
 # PyTorch Examples
 
-[简体中文](README.zh-CN.md) · [MNIST 入门说明](入门说明.md)
+[简体中文](README.zh-CN.md) · [MNIST 入门说明](docs/入门说明.md) · [MNIST 学习笔记与流程图](docs/mnist-learning-notes.zh-CN.md)
 
 https://pytorch.org/examples/
 
@@ -22,7 +22,7 @@ https://pytorch.org/examples/
 - [Superresolution using an efficient sub-pixel convolutional neural network](./super_resolution/README.md)
 - [Hogwild training of shared ConvNets across multiple processes on MNIST](mnist_hogwild)
 - [Training a CartPole to balance with actor-critic](./reinforcement_learning/README.md)
-- [Natural Language Inference (SNLI) with GloVe vectors, LSTMs, and torchtext](snli)
+- [Natural Language Inference (SNLI) with GloVe vectors, LSTMs, and torchtext](legacy/snli)
 - [Time sequence prediction - use an LSTM to learn Sine waves](./time_sequence_prediction/README.md)
 - [Implement the Neural Style Transfer algorithm on images](./fast_neural_style/README.md)
 - [Reinforcement Learning with Actor Critic and REINFORCE algorithms on OpenAI gym](./reinforcement_learning/README.md)
