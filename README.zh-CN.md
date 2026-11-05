@@ -16,7 +16,9 @@
 
 ## 初学者从这里开始
 
-建议先阅读 [MNIST 手写数字识别](./mnist/README.zh-CN.md)，再结合本地的[入门说明](./入门说明.md)和 `mnist/main.py` 学习数据加载、模型、训练及测试。
+建议先阅读 [MNIST 手写数字识别](./mnist/README.zh-CN.md)，再结合本地的[入门说明](./docs/入门说明.md)和 `mnist/main.py` 学习数据加载、模型、训练及测试。
+
+复习整体过程可阅读 [MNIST 学习笔记与流程图](./docs/mnist-learning-notes.zh-CN.md)。
 
 ## 示例与模型
 
