@@ -9,10 +9,15 @@ emit calls to
 Please note that before https://github.com/pytorch/pytorch/pull/65180 lands,
 these ranges may be elimineated by `Graph.eliminate_dead_code`
 """
+# 本文件演示自定义 FX Tracer，重写 torch.autograd.profiler.record_function 的行为，
+# 让性能分析区间出现在 FX 追踪后的代码中。通过 Python 动态替换机制，
+# 显式生成 torch.ops.profiler._record_function_enter 和 _record_function_exit 调用。
+# 注意：原文所列 PR 合入之前，Graph.eliminate_dead_code 可能删除这些区间。
 import torch
 import torch.fx
 
 # Setup: a module with `record_function`
+# 准备：包含 record_function 的模块。
 class Foo(torch.nn.Module):
   def forward(self, x):
     with torch.profiler.record_function('foo'):
@@ -25,6 +30,7 @@ with torch.autograd.profiler.profile() as prof:
 
 print(prof)
 # "foo" range is correctly recorded with normal execution
+# 正常执行时，foo 性能分析区间被正确记录。
 """
 -------------------  ------------  ------------  ------------  ------------  ------------  ------------  
                Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
@@ -41,6 +47,8 @@ print(prof)
 -------------------  ------------  ------------  ------------  ------------  ------------  ------------  
 Self CPU time total: 168.831us
 """
+# 性能分析输出，包含 foo 区间。
+# 列依次为名称、自身 CPU 时间占比、自身 CPU 时间、总 CPU 时间占比、总 CPU 时间、平均 CPU 时间和调用次数；底部为自身 CPU 总时间。
 
 
 traced = torch.fx.symbolic_trace(f)
@@ -49,6 +57,7 @@ with torch.autograd.profiler.profile() as prof:
 
 print(prof)
 # "foo" range is not recorded with FX tracing
+# 普通 FX 追踪时，没有记录 foo 区间。
 """
 -------------------  ------------  ------------  ------------  ------------  ------------  ------------  
                Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
@@ -60,6 +69,8 @@ print(prof)
 -------------------  ------------  ------------  ------------  ------------  ------------  ------------  
 Self CPU time total: 45.186us
 """
+# 普通 FX 追踪的性能分析输出，没有 foo 区间。
+# 列含义同上，底部为自身 CPU 总时间。
 
 
 class ProfilerTracer(torch.fx.Tracer):
@@ -104,6 +115,7 @@ with torch.autograd.profiler.profile() as prof:
 
 print(prof)
 # "foo" range is recorded with special tracer behavior
+# 采用特殊追踪行为时，可以记录 foo 区间。
 """
 -------------------  ------------  ------------  ------------  ------------  ------------  ------------  
                Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
@@ -117,3 +129,5 @@ print(prof)
 -------------------  ------------  ------------  ------------  ------------  ------------  ------------  
 Self CPU time total: 202.055us
 """
+# 自定义追踪后的性能分析输出，重新记录了 foo 区间。
+# 列含义同上，底部为自身 CPU 总时间。

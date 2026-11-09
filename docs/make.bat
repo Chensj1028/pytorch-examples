@@ -3,6 +3,7 @@
 pushd %~dp0
 
 REM Command file for Sphinx documentation
+REM 用于构建 Sphinx 文档的命令文件。
 
 if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build

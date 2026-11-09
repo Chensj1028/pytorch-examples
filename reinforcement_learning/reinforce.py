@@ -85,6 +85,7 @@ def main():
         state, _ = env.reset()
         ep_reward = 0
         for t in range(1, 10000):  # Don't infinite loop while learning
+        # 避免学习过程中无限循环。
             action = select_action(state)
             state, reward, terminated, truncated, _ = env.step(action)
             if args.render:

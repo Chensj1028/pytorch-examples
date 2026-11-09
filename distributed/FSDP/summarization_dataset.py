@@ -48,6 +48,7 @@ class wikihow(Dataset):
 
     def convert_to_features(self, example_batch):
         # Tokenize contexts and questions (as pairs of inputs)
+        # 将上下文和问题作为成对输入进行分词。
 
         if self.print_text:
             print("Input Text: ", self.clean_text(example_batch['text']))

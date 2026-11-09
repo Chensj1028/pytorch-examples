@@ -77,7 +77,9 @@ class Trainer:
 
 def load_train_objs():
     train_set = MyTrainDataset(2048)  # load your dataset
+    # 加载数据集。
     model = torch.nn.Linear(20, 1)  # load your model
+    # 加载模型。
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     return train_set, model, optimizer
 

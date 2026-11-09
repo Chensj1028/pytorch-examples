@@ -27,37 +27,59 @@ statement `print(traced.graph)` after the line you want to inspect.
 Alternatively, call `traced.graph.print_tabular()` to see the IR in a
 tabular format.
 """
+# 如何将一种操作替换为另一种：
+# 1．遍历 GraphModule 中的所有节点；2．判断是否需要替换，建议匹配 target 属性；
+# 3．创建替代节点并加入图；4．用 replace_all_uses_with 替换原节点的所有使用位置；
+# 5．删除旧节点；6．调用 recompile，使生成的 Python 代码反映新图。
+# FX 不保证替换后的操作与操作数兼容，需要调用方自行确认。
+# 本例将加法替换为按位与；可插入 print(traced.graph) 或调用 print_tabular() 查看图的变化。
 
 # Sample module
+# 示例模块。
 class M(torch.nn.Module):
     def forward(self, x, y):
         return x + y, torch.add(x, y), x.add(y)
 
 # Symbolically trace an instance of the module
+# 对模块实例进行符号追踪。
 traced = symbolic_trace(M())
 
 # As demonstrated in the above example, there are several different ways
+# 如上例所示，加法可以通过几种不同方式
 # to denote addition. The possible cases are:
+# 表示，具体情况如下：
 #     1. `x + y` - A `call_function` Node with target `operator.add`.
+# 1．x + y：目标为 operator.add 的 call_function 节点。
 #         We can match for equality on that `operator.add` directly.
+# 可直接比较目标是否等于 operator.add。
 #     2. `torch.add(x, y)` - A `call_function` Node with target
+# 2．torch.add(x, y)：目标为 torch.add 的
 #         `torch.add`. Similarly, we can match this function directly.
+# call_function 节点，同样可直接匹配该函数。
 #     3. `x.add(y)` - The Tensor method call, whose target we can match
+# 3．x.add(y)：张量方法调用，可通过目标名称
 #         as a string.
+# 字符串进行匹配。
 
 patterns = set([operator.add, torch.add, "add"])
 
 # Go through all the nodes in the Graph
+# 遍历计算图中的所有节点。
 for n in traced.graph.nodes:
     # If the target matches one of the patterns
+    # 如果目标匹配某种模式，
     if any(n.target == pattern for pattern in patterns):
         # Set the insert point, add the new node, and replace all uses
+        # 设置插入位置，添加新节点，并将 n 的所有使用位置
         # of `n` with the new node
+        # 替换为新节点。
         with traced.graph.inserting_after(n):
             new_node = traced.graph.call_function(torch.bitwise_and, n.args, n.kwargs)
             n.replace_all_uses_with(new_node)
         # Remove the old node from the graph
+        # 从计算图删除旧节点。
         traced.graph.erase_node(n)
 
 # Don't forget to recompile!
+# 别忘了重新编译。
 traced.recompile()

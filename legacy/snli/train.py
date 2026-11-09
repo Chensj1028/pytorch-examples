@@ -46,6 +46,7 @@ config.d_out = len(answers.vocab)
 config.n_cells = config.n_layers
 
 # double the number of cells for bidirectional networks
+# 双向网络的单元数量翻倍。
 if config.birnn:
     config.n_cells *= 2
 
@@ -75,25 +76,31 @@ for epoch in range(args.epochs):
     for batch_idx, batch in enumerate(train_iter):
 
         # switch model to training mode, clear gradient accumulators
+        # 切换为训练模式，并清空累积梯度。
         model.train(); opt.zero_grad()
 
         iterations += 1
 
         # forward pass
+        # 前向传播。
         answer = model(batch)
 
         # calculate accuracy of predictions in the current batch
+        # 计算当前批次预测的准确率。
         n_correct += (torch.max(answer, 1)[1].view(batch.label.size()) == batch.label).sum().item()
         n_total += batch.batch_size
         train_acc = 100. * n_correct/n_total
 
         # calculate loss of the network output with respect to training labels
+        # 根据训练标签计算网络输出的损失。
         loss = criterion(answer, batch.label)
 
         # backpropagate and update optimizer learning rate
+        # 反向传播，并更新优化器学习率。
         loss.backward(); opt.step()
 
         # checkpoint model periodically
+        # 定期保存模型检查点。
         if iterations % args.save_every == 0:
             snapshot_prefix = os.path.join(args.save_path, 'snapshot')
             snapshot_path = snapshot_prefix + '_acc_{:.4f}_loss_{:.6f}_iter_{}_model.pt'.format(train_acc, loss.item(), iterations)
@@ -103,12 +110,15 @@ for epoch in range(args.epochs):
                     os.remove(f)
 
         # evaluate performance on validation set periodically
+        # 定期在验证集上评估性能。
         if iterations % args.dev_every == 0:
 
             # switch model to evaluation mode
+            # 将模型切换为评估模式。
             model.eval(); dev_iter.init_epoch()
 
             # calculate accuracy on validation set
+            # 计算验证集准确率。
             n_dev_correct, dev_loss = 0, 0
             with torch.no_grad():
                 for dev_batch_idx, dev_batch in enumerate(dev_iter):
@@ -122,15 +132,18 @@ for epoch in range(args.epochs):
                 100. * (1+batch_idx) / len(train_iter), loss.item(), dev_loss.item(), train_acc, dev_acc))
 
             # update best validation set accuracy
+            # 更新最佳验证集准确率。
             if dev_acc > best_dev_acc:
 
                 # found a model with better validation set accuracy
+                # 找到验证集准确率更高的模型。
 
                 best_dev_acc = dev_acc
                 snapshot_prefix = os.path.join(args.save_path, 'best_snapshot')
                 snapshot_path = snapshot_prefix + '_devacc_{}_devloss_{}__iter_{}_model.pt'.format(dev_acc, dev_loss.item(), iterations)
 
                 # save model, delete previous 'best_snapshot' files
+                # 保存模型，并删除之前的 best_snapshot 文件。
                 torch.save(model, snapshot_path)
                 for f in glob.glob(snapshot_prefix + '*'):
                     if f != snapshot_path:
@@ -139,6 +152,7 @@ for epoch in range(args.epochs):
         elif iterations % args.log_every == 0:
 
             # print progress message
+            # 打印进度信息。
             print(log_template.format(time.time()-start,
                 epoch, iterations, 1+batch_idx, len(train_iter),
                 100. * (1+batch_idx) / len(train_iter), loss.item(), ' '*8, n_correct/n_total*100, ' '*12))

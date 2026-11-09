@@ -1,5 +1,7 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
+# 版权所有 © Meta Platforms, Inc. 及其关联方。
 # This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
+# 本软件可依照 Llama 2 社区许可协议的条款使用和分发。
 
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -16,14 +18,18 @@ class ModelArgs:
     n_heads: int = 32
     n_kv_heads: Optional[int] = None
     vocab_size: int = -1  # defined later by tokenizer
+    # 之后由分词器定义。
     multiple_of: int = 256  # make SwiGLU hidden layer size multiple of large power of 2
+    # 使 SwiGLU 隐藏层大小成为较大 2 的幂的整数倍。
     ffn_dim_multiplier: Optional[float] = None
     norm_eps: float = 1e-5
 
     max_batch_size: int = 32
     max_seq_len: int = 32768
     # If `True`, then each transformer block init uses its layer ID, and if
+    # 若为 True，每个 Transformer 块使用自身层编号初始化；
     # `False`, each uses the total number of transformer blocks
+    # 若为 False，则每个块都使用 Transformer 块总数。
     depth_init: bool = True
 
 
@@ -43,6 +49,11 @@ def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0):
     Returns:
         torch.Tensor: Precomputed frequency tensor with complex exponentials.
     """
+    # 预计算给定维度的复指数频率张量。
+    # 使用维度 dim 和结束位置 end 计算频率，theta 控制频率缩放；返回 complex64 张量。
+    # 参数 dim（int）：频率张量维度。end（int）：预计算的结束索引。
+    # 参数 theta（float，可选）：频率缩放因子，默认 10000.0。
+    # 返回值 torch.Tensor：预计算的复指数频率张量。
     freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
     t = torch.arange(end, device=freqs.device)  # type: ignore
     freqs = torch.outer(t, freqs).float()  # type: ignore
@@ -64,6 +75,10 @@ def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
     Returns:
         torch.Tensor: Reshaped frequency tensor.
     """
+    # 调整频率张量形状，以便与目标张量进行广播。
+    # 参数 freqs_cis（torch.Tensor）：待调整的频率张量。
+    # 参数 x（torch.Tensor）：要求广播兼容的目标张量。
+    # 返回值：调整形状后的频率张量，用于逐元素运算。
     ndim = x.ndim
     assert 0 <= 1 < ndim
     assert freqs_cis.shape == (x.shape[1], x.shape[-1])
@@ -92,6 +107,10 @@ def apply_rotary_emb(
     Returns:
         Tuple[torch.Tensor, torch.Tensor]: Tuple of modified query tensor and key tensor with rotary embeddings.
     """
+    # 使用频率张量为查询 xq 和键 xk 应用旋转位置嵌入。
+    # 将输入重排为复数，并调整 freqs_cis 的形状以满足广播要求，最后返回实数张量。
+    # 参数 xq、xk：查询张量和键张量。freqs_cis：预计算的复指数频率张量。
+    # 返回值：应用旋转位置嵌入后的查询张量和键张量组成的二元组。
     xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
     xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
     freqs_cis = reshape_for_broadcast(freqs_cis, xq_)
@@ -125,6 +144,9 @@ class RMSNorm(nn.Module):
         weight (nn.Parameter): Learnable scaling parameter.
 
     """
+    # 初始化 RMSNorm 归一化层。
+    # 参数 dim（int）：输入维度。eps（float，可选）：分母中的稳定性常数，默认 1e-6。
+    # 属性 eps：数值稳定性常数。weight（nn.Parameter）：可学习的缩放参数。
 
     def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
@@ -161,6 +183,11 @@ class Attention(nn.Module):
         wo (Linear): Linear transformation for output.
 
     """
+    # 多头注意力模块。
+    # 参数 model_args（ModelArgs）：模型配置。
+    # 属性 n_kv_heads：键和值的头数；n_heads：查询头数；n_local_kv_heads：本地键和值的头数。
+    # n_rep：本地头的重复次数；head_dim：每个注意力头的维度。
+    # wq、wk、wv、wo：分别用于查询、键、值和输出的线性变换。
 
     def __init__(self, model_args: ModelArgs):
         super().__init__()
@@ -203,6 +230,9 @@ class Attention(nn.Module):
             torch.Tensor: Output tensor after attention.
 
         """
+        # 注意力模块的前向传播。
+        # 参数 x：输入张量；freqs_cis：预计算的频率张量。
+        # 返回值：经过注意力计算后的输出张量。
         bsz, seqlen, _ = x.shape
         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
 
@@ -213,17 +243,24 @@ class Attention(nn.Module):
         xq, xk = apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
 
         keys = repeat_kv(xk, self.n_rep)  # (bs, seqlen, n_local_heads, head_dim)
+        # 形状：批大小、序列长度、本地注意力头数、每个头的维度。
         values = repeat_kv(xv, self.n_rep)  # (bs, seqlen, n_local_heads, head_dim)
+        # 形状：批大小、序列长度、本地注意力头数、每个头的维度。
 
         xq = xq.transpose(1, 2)  # (bs, n_local_heads, seqlen, head_dim)
+        # 形状：批大小、本地注意力头数、序列长度、每个头的维度。
         xk = keys.transpose(1, 2)  # (bs, n_local_heads, seqlen, head_dim)
+        # 形状：批大小、本地注意力头数、序列长度、每个头的维度。
         xv = values.transpose(1, 2)  # (bs, n_local_heads, seqlen, head_dim)
+        # 形状：批大小、本地注意力头数、序列长度、每个头的维度。
 
         # we use casual mask for training
+        # 训练时使用因果掩码。
         output = F.scaled_dot_product_attention(xq, xk, xv, is_causal=True)
         output = output.transpose(
             1, 2
         ).contiguous()  # (bs, seqlen, n_local_heads, head_dim)
+        # 形状：批大小、序列长度、本地注意力头数、每个头的维度。
         output = output.view(bsz, seqlen, -1)
         return self.wo(output)
 
@@ -244,6 +281,10 @@ class FeedForward(nn.Module):
         w3 (Linear): Linear transformation for the third layer.
 
     """
+    # 前馈网络模块。
+    # 参数 dim：输入维度；hidden_dim：前馈层的隐藏维度。
+    # multiple_of：保证隐藏维度是该值的整数倍；ffn_dim_multiplier：自定义隐藏维度倍数，默认 None。
+    # 属性 w1、w2、w3：第一、第二和第三个线性变换层。
 
     def __init__(
         self,
@@ -255,6 +296,7 @@ class FeedForward(nn.Module):
         super().__init__()
         hidden_dim = int(2 * hidden_dim / 3)
         # custom dim factor multiplier
+        # 自定义维度缩放因子。
         if ffn_dim_multiplier is not None:
             hidden_dim = int(ffn_dim_multiplier * hidden_dim)
         hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)
@@ -291,6 +333,11 @@ class TransformerBlock(nn.Module):
         ffn_norm (RMSNorm): Layer normalization for feedforward output.
 
     """
+    # Transformer 块模块。
+    # 参数 layer_id：层编号；model_args：模型配置。
+    # 属性 n_heads：注意力头数；dim：模型维度；head_dim：每个头的维度。
+    # attention：注意力模块；feed_forward：前馈模块；layer_id：层编号。
+    # attention_norm、ffn_norm：分别用于注意力输出和前馈输出的 RMSNorm 归一化层。
 
     def __init__(self, layer_id: int, model_args: ModelArgs):
         super().__init__()
@@ -334,6 +381,9 @@ class TransformerBlock(nn.Module):
             torch.Tensor: Output tensor after applying attention and feedforward layers.
 
         """
+        # 执行 Transformer 块的前向传播。
+        # 参数 x：输入张量；freqs_cis：预计算的余弦和正弦频率。
+        # 返回值：经过注意力层和前馈层后的输出张量。
         h = x + self.attention(self.attention_norm(x), freqs_cis)
         out = h + self.feed_forward(self.ffn_norm(h))
         return out
@@ -363,6 +413,11 @@ class Transformer(nn.Module):
         freqs_cis (torch.Tensor): Precomputed cosine and sine frequencies.
 
     """
+    # Transformer 模块。
+    # 参数及属性 model_args：模型配置。
+    # 属性 vocab_size：词表大小；n_layers：模型层数；tok_embeddings：词元嵌入。
+    # layers：Transformer 块列表；norm：模型输出的 RMSNorm；output：最终输出线性层。
+    # freqs_cis：预计算的余弦和正弦频率张量。
 
     def __init__(self, model_args: ModelArgs):
         super().__init__()
@@ -377,7 +432,9 @@ class Transformer(nn.Module):
             precompute_freqs_cis(
                 model_args.dim // model_args.n_heads,
                 # Need to compute until at least the max token limit for generation
+                # 至少计算到生成时所需的最大词元数量，
                 # (use 2x max sequence length to be safe)
+                # 为稳妥起见，使用最大序列长度的两倍。
                 model_args.max_seq_len * 2,
             ),
         )
@@ -404,11 +461,17 @@ class Transformer(nn.Module):
         ``init_weights``. We only call it in the constructor of this
         ``Transformer`` root module to avoid reinitializing tensors.
         """
+        # 关于 init_weights 与 reset_parameters 的区别：
+        # 模块可定义 reset_parameters，初始化其直接拥有的参数和缓冲区，而不初始化子模块。
+        # 用户也可能需要不同于 reset_parameters 的自定义初始化，因此定义 init_weights。
+        # 这里只在根 Transformer 模块的构造函数中调用它，避免重复初始化张量。
         with torch.device(self.freqs_cis.device):
             self.freqs_cis = precompute_freqs_cis(
                 self.model_args.dim // self.model_args.n_heads,
                 # Need to compute until at least the max token limit for generation
+                # 至少计算到生成时所需的最大词元数量，
                 # (use 2x max sequence length to be safe)
+                # 为稳妥起见，使用最大序列长度的两倍。
                 self.model_args.max_seq_len * 2,
             )
         nn.init.normal_(self.tok_embeddings.weight)
@@ -436,6 +499,9 @@ class Transformer(nn.Module):
             torch.Tensor: Output logits after applying the Transformer model.
 
         """
+        # 执行 Transformer 模型的前向传播。
+        # 参数 tokens：输入词元索引。
+        # 返回值：经过 Transformer 后的输出 logits。
         _bsz, seqlen = tokens.shape
         h = self.tok_embeddings(tokens)
         self.freqs_cis = self.freqs_cis.to(h.device)
@@ -459,4 +525,7 @@ class Transformer(nn.Module):
             Transformer: Transformer model.
 
         """
+        # 根据 ModelArgs 对象初始化 Transformer。
+        # 参数 model_args：模型配置。
+        # 返回值：Transformer 模型。
         return cls(model_args)

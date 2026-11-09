@@ -1,7 +1,9 @@
 ###############################################################################
 # Language Modeling on Wikitext-2
+# 在 WikiText-2 上进行语言建模。
 #
 # This file generates new sentences sampled from the language model.
+# 此文件从语言模型中采样，生成新句子。
 #
 ###############################################################################
 import argparse
@@ -12,6 +14,7 @@ from model import PositionalEncoding, RNNModel, TransformerModel
 
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 Language Model')
 # Model parameters.
+# 模型参数。
 parser.add_argument('--data', type=str, default='./data/wikitext-2',
                     help='location of the data corpus')
 parser.add_argument('--checkpoint', type=str, default='./model.pt',
@@ -31,6 +34,7 @@ parser.add_argument('--accel', action='store_true', default=False,
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
+# 手动设置随机种子，以便复现。
 torch.manual_seed(args.seed)
 
 if args.accel and torch.accelerator.is_available():
@@ -75,6 +79,7 @@ input = torch.randint(ntokens, (1, 1), dtype=torch.long).to(device)
 
 with open(args.outf, 'w') as outf:
     with torch.no_grad():  # no tracking history
+    # 不跟踪计算历史。
         for i in range(args.words):
             if is_transformer_model:
                 output = model(input, False)

@@ -62,6 +62,7 @@ if opt.dataroot is None and str(opt.dataset).lower() != 'fake':
 
 if opt.dataset in ['imagenet', 'folder', 'lfw']:
     # folder dataset
+    # 按文件夹组织的数据集。
     dataset = dset.ImageFolder(root=opt.dataroot,
                                transform=transforms.Compose([
                                    transforms.Resize(opt.imageSize),
@@ -114,6 +115,7 @@ ndf = int(opt.ndf)
 
 
 # custom weights initialization called on netG and netD
+# 对 netG 和 netD 应用自定义权重初始化。
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
@@ -129,25 +131,31 @@ class Generator(nn.Module):
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is Z, going into a convolution
+            # 输入为噪声 Z，送入卷积层。
             nn.ConvTranspose2d(     nz, ngf * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. (ngf*8) x 4 x 4
+            # 特征形状：(ngf×8)×4×4。
             nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
             # state size. (ngf*4) x 8 x 8
+            # 特征形状：(ngf×4)×8×8。
             nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
             # state size. (ngf*2) x 16 x 16
+            # 特征形状：(ngf×2)×16×16。
             nn.ConvTranspose2d(ngf * 2,     ngf, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
             # state size. (ngf) x 32 x 32
+            # 特征形状：ngf×32×32。
             nn.ConvTranspose2d(    ngf,      nc, 4, 2, 1, bias=False),
             nn.Tanh()
             # state size. (nc) x 64 x 64
+            # 特征形状：nc×64×64。
         )
 
     def forward(self, input):
@@ -172,21 +180,26 @@ class Discriminator(nn.Module):
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
+            # 输入形状为 nc×64×64。
             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf) x 32 x 32
+            # 特征形状：ndf×32×32。
             nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 2),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*2) x 16 x 16
+            # 特征形状：(ndf×2)×16×16。
             nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 4),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*4) x 8 x 8
+            # 特征形状：(ndf×4)×8×8。
             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*8) x 4 x 4
+            # 特征形状：(ndf×8)×4×4。
             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
             nn.Sigmoid()
         )
@@ -213,6 +226,7 @@ real_label = 1
 fake_label = 0
 
 # setup optimizer
+# 配置优化器。
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 
@@ -223,8 +237,10 @@ for epoch in range(opt.niter):
     for i, data in enumerate(dataloader, 0):
         ############################
         # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+        # （1）更新判别器 D：最大化 log(D(x)) + log(1 - D(G(z)))。
         ###########################
         # train with real
+        # 使用真实样本训练。
         netD.zero_grad()
         real_cpu = data[0].to(device)
         batch_size = real_cpu.size(0)
@@ -237,6 +253,7 @@ for epoch in range(opt.niter):
         D_x = output.mean().item()
 
         # train with fake
+        # 使用假样本训练。
         noise = torch.randn(batch_size, nz, 1, 1, device=device)
         fake = netG(noise)
         label.fill_(fake_label)
@@ -249,9 +266,11 @@ for epoch in range(opt.niter):
 
         ############################
         # (2) Update G network: maximize log(D(G(z)))
+        # （2）更新生成器 G：最大化 log(D(G(z)))。
         ###########################
         netG.zero_grad()
         label.fill_(real_label)  # fake labels are real for generator cost
+        # 计算生成器损失时，将假样本的目标标签设为真实。
         output = netD(fake)
         errG = criterion(output, label)
         errG.backward()
@@ -273,5 +292,6 @@ for epoch in range(opt.niter):
         if opt.dry_run:
             break
     # do checkpointing
+    # 保存检查点。
     torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, epoch))
     torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, epoch))

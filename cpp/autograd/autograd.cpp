@@ -7,10 +7,12 @@ void basic_autograd_operations_example() {
   std::cout << "====== Running: \"Basic autograd operations\" ======" << std::endl;
 
   // Create a tensor and set ``torch::requires_grad()`` to track computation with it
+  // 创建张量，并设置 torch::requires_grad()，以跟踪基于它的计算。
   auto x = torch::ones({2, 2}, torch::requires_grad());
   std::cout << x << std::endl;
 
   // Do a tensor operation:
+  // 对张量进行运算：
   auto y = x + 2;
   std::cout << y << std::endl;
 
@@ -18,6 +20,7 @@ void basic_autograd_operations_example() {
   std::cout << y.grad_fn()->name() << std::endl;
 
   // Do more operations on ``y``
+  // 继续对 y 进行运算。
   auto z = y * y * 3;
   auto out = z.mean();
 
@@ -27,6 +30,7 @@ void basic_autograd_operations_example() {
   std::cout << out.grad_fn()->name() << std::endl;
 
   // ``.requires_grad_( ... )`` changes an existing tensor's ``requires_grad`` flag in-place.
+  // .requires_grad_(...) 会原地修改现有张量的 requires_grad 标志。
   auto a = torch::randn({2, 2});
   a = ((a * 3) / (a - 1));
   std::cout << a.requires_grad() << std::endl;
@@ -38,13 +42,17 @@ void basic_autograd_operations_example() {
   std::cout << b.grad_fn()->name() << std::endl;
 
   // Let's backprop now. Because ``out`` contains a single scalar, ``out.backward()``
+  // 现在进行反向传播。由于 out 只包含一个标量，out.backward()
   // is equivalent to ``out.backward(torch::tensor(1.))``.
+  // 等价于 out.backward(torch::tensor(1.))。
   out.backward();
 
   // Print gradients d(out)/dx
+  // 打印梯度 d(out)/dx。
   std::cout << x.grad() << std::endl;
 
   // Now let's take a look at an example of vector-Jacobian product:
+  // 下面看一个向量与雅可比矩阵乘积的示例：
   x = torch::randn(3, torch::requires_grad());
 
   y = x * 2;
@@ -56,13 +64,16 @@ void basic_autograd_operations_example() {
   std::cout << y.grad_fn()->name() << std::endl;
 
   // If we want the vector-Jacobian product, pass the vector to ``backward`` as argument:
+  // 计算向量与雅可比矩阵的乘积时，将该向量作为参数传给 backward：
   auto v = torch::tensor({0.1, 1.0, 0.0001}, torch::kFloat);
   y.backward(v);
 
   std::cout << x.grad() << std::endl;
 
   // You can also stop autograd from tracking history on tensors that require gradients
+  // 对于需要梯度的张量，也可以停止自动求导对其历史计算的跟踪，
   // either by putting ``torch::NoGradGuard`` in a code block
+  // 方法之一是在代码块中使用 torch::NoGradGuard。
   std::cout << x.requires_grad() << std::endl;
   std::cout << x.pow(2).requires_grad() << std::endl;
 
@@ -72,7 +83,9 @@ void basic_autograd_operations_example() {
   }
 
   // Or by using ``.detach()`` to get a new tensor with the same content but that does
+  // 另一种方法是调用 .detach()，得到内容相同、
   // not require gradients:
+  // 但不需要梯度的新张量：
   std::cout << x.requires_grad() << std::endl;
   y = x.detach();
   std::cout << y.requires_grad() << std::endl;
@@ -83,7 +96,9 @@ void compute_higher_order_gradients_example() {
   std::cout << "====== Running \"Computing higher-order gradients in C++\" ======" << std::endl;
 
   // One of the applications of higher-order gradients is calculating gradient penalty.
+  // 高阶梯度的一种用途是计算梯度惩罚。
   // Let's see an example of it using ``torch::autograd::grad``:
+  // 下面用 torch::autograd::grad 演示：
 
   auto model = torch::nn::Linear(4, 3);
 
@@ -91,15 +106,18 @@ void compute_higher_order_gradients_example() {
   auto output = model(input);
 
   // Calculate loss
+  // 计算损失。
   auto target = torch::randn({3, 3});
   auto loss = torch::nn::MSELoss()(output, target);
 
   // Use norm of gradients as penalty
+  // 使用梯度的范数作为惩罚项。
   auto grad_output = torch::ones_like(output);
   auto gradient = torch::autograd::grad({output}, {input}, /*grad_outputs=*/{grad_output}, /*create_graph=*/true)[0];
   auto gradient_penalty = torch::pow((gradient.norm(2, /*dim=*/1) - 1), 2).mean();
 
   // Add gradient penalty to loss
+  // 将梯度惩罚加入损失。
   auto combined_loss = loss + gradient_penalty;
   combined_loss.backward();
 
@@ -107,11 +125,14 @@ void compute_higher_order_gradients_example() {
 }
 
 // Inherit from Function
+// 继承 Function。
 class LinearFunction : public Function<LinearFunction> {
  public:
   // Note that both forward and backward are static functions
+  // 注意，forward 和 backward 都是静态函数。
 
   // bias is an optional argument
+  // bias 是可选参数。
   static torch::Tensor forward(
       AutogradContext *ctx, torch::Tensor input, torch::Tensor weight, torch::Tensor bias = torch::Tensor()) {
     ctx->save_for_backward({input, weight, bias});
@@ -144,14 +165,18 @@ class MulConstant : public Function<MulConstant> {
  public:
   static torch::Tensor forward(AutogradContext *ctx, torch::Tensor tensor, double constant) {
     // ctx is a context object that can be used to stash information
+    // ctx 是上下文对象，可以保存信息，
     // for backward computation
+    // 供反向传播计算使用。
     ctx->saved_data["constant"] = constant;
     return tensor * constant;
   }
 
   static tensor_list backward(AutogradContext *ctx, tensor_list grad_outputs) {
     // We return as many input gradients as there were arguments.
+    // 返回的输入梯度数量必须与传入参数数量一致。
     // Gradients of non-tensor arguments to forward must be `torch::Tensor()`.
+    // forward 中非张量参数对应的梯度必须为 torch::Tensor()。
     return {grad_outputs[0] * ctx->saved_data["constant"].toDouble(), torch::Tensor()};
   }
 };

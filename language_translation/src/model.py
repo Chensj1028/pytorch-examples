@@ -40,6 +40,7 @@ class Translator(nn.Module):
         super(Translator, self).__init__()
 
         # Output of embedding must be equal (embed_size)
+        # 嵌入输出的大小必须等于 embed_size。
         self.src_embedding = nn.Embedding(src_vocab_size, embed_size)
         self.tgt_embedding = nn.Embedding(tgt_vocab_size, embed_size)
 

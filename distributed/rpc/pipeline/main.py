@@ -15,6 +15,7 @@ from torch.distributed.rpc import RRef
 from torchvision.models.resnet import Bottleneck
 
 # Suppress warnings that can't be fixed from user code
+# 屏蔽无法从用户代码中修复的警告。
 warnings.filterwarnings("ignore", 
     message="You are using a Backend .* as a ProcessGroup. This usage is deprecated", 
     category=UserWarning)
@@ -25,12 +26,17 @@ warnings.filterwarnings("ignore",
 
 #########################################################
 #           Define Model Parallel ResNet50              #
+# 定义模型并行的 ResNet50。
 #########################################################
 
 # In order to split the ResNet50 and place it on two different workers, we
+# 为了将 ResNet50 拆分并部署到两个不同的工作进程，
 # implement it in two model shards. The ResNetBase class defines common
+# 这里实现两个模型分片。ResNetBase 类定义两个分片
 # attributes and methods shared by two shards. ResNetShard1 and ResNetShard2
+# 共用的属性和方法；ResNetShard1 和 ResNetShard2
 # contain two partitions of the model layers respectively.
+# 分别包含模型的一部分层。
 
 
 num_classes = 1000
@@ -38,6 +44,7 @@ num_classes = 1000
 
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
+    # 1×1 卷积。
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 class ResNetBase(nn.Module):
@@ -79,6 +86,7 @@ class ResNetBase(nn.Module):
         Create one RRef for each parameter in the given local module, and return a
         list of RRefs.
         """
+        # 为给定本地模块的每个参数创建一个 RRef，并返回 RRef 列表。
         return [RRef(p) for p in self.parameters()]
 
 
@@ -86,6 +94,7 @@ class ResNetShard1(ResNetBase):
     """
     The first part of ResNet.
     """
+    # ResNet 的第一部分。
     def __init__(self, device, *args, **kwargs):
         super(ResNetShard1, self).__init__(
             Bottleneck, 64, num_classes=num_classes, *args, **kwargs)
@@ -118,6 +127,7 @@ class ResNetShard2(ResNetBase):
     """
     The second part of ResNet.
     """
+    # ResNet 的第二部分。
     def __init__(self, device, *args, **kwargs):
         super(ResNetShard2, self).__init__(
             Bottleneck, 512, num_classes=num_classes, *args, **kwargs)
@@ -142,12 +152,14 @@ class DistResNet50(nn.Module):
     """
     Assemble two parts as an nn.Module and define pipelining logic
     """
+    # 将两部分组装成 nn.Module，并定义流水线执行逻辑。
     def __init__(self, split_size, workers, *args, **kwargs):
         super(DistResNet50, self).__init__()
 
         self.split_size = split_size
 
         # Put the first part of the ResNet50 on workers[0]
+        # 将 ResNet50 的第一部分放到 workers[0]。
         self.p1_rref = rpc.remote(
             workers[0],
             ResNetShard1,
@@ -156,6 +168,7 @@ class DistResNet50(nn.Module):
         )
 
         # Put the second part of the ResNet50 on workers[1]
+        # 将 ResNet50 的第二部分放到 workers[1]。
         self.p2_rref = rpc.remote(
             workers[1],
             ResNetShard2,
@@ -165,7 +178,9 @@ class DistResNet50(nn.Module):
 
     def forward(self, xs):
         # Split the input batch xs into micro-batches, and collect async RPC
+        # 将输入批次 xs 拆成微批次，并将异步 RPC 返回的
         # futures into a list
+        # Future 对象收集到列表中。
         out_futures = []
         for x in iter(xs.split(self.split_size, dim=0)):
             x_rref = RRef(x)
@@ -174,6 +189,7 @@ class DistResNet50(nn.Module):
             out_futures.append(z_fut)
 
         # collect and cat all output tensors into one tensor.
+        # 收集所有输出张量并拼接为一个张量。
         return torch.cat(torch.futures.wait_all(out_futures))
 
     def parameter_rrefs(self):
@@ -185,6 +201,7 @@ class DistResNet50(nn.Module):
 
 #########################################################
 #                   Run RPC Processes                   #
+# 运行 RPC 进程。
 #########################################################
 
 num_batches = 3
@@ -195,6 +212,7 @@ image_h = 128
 
 def create_optimizer_for_remote_params(worker_name, param_rrefs, lr=0.05):
     """Create torch.compiled optimizers on  each worker"""
+    # 在每个工作进程上创建经 torch.compile 编译的优化器。
     params = [p.to_here() for p in param_rrefs]
     opt = optim.SGD(params, lr=lr)
     opt.step = torch.compile(opt.step)
@@ -204,14 +222,17 @@ def create_optimizer_for_remote_params(worker_name, param_rrefs, lr=0.05):
 def run_master(split_size):
 
     # put the two model parts on worker1 and worker2 respectively
+    # 将模型的两部分分别放到 worker1 和 worker2。
     model = DistResNet50(split_size, ["worker1", "worker2"])
     loss_fn = nn.MSELoss()
     
     # Get parameter RRefs for each model shard
+    # 获取每个模型分片的参数 RRef。
     p1_param_rrefs = model.p1_rref.remote().parameter_rrefs().to_here()
     p2_param_rrefs = model.p2_rref.remote().parameter_rrefs().to_here()
     
     # Create optimizers on remote workers
+    # 在远程工作进程上创建优化器。
     opt1_rref = rpc.remote(
         "worker1",
         create_optimizer_for_remote_params,
@@ -230,13 +251,17 @@ def run_master(split_size):
     for i in range(num_batches):
         print(f"Processing batch {i}")
         # generate random inputs and labels
+        # 生成随机输入和标签。
         inputs = torch.randn(batch_size, 3, image_w, image_h)
         labels = torch.zeros(batch_size, num_classes) \
                       .scatter_(1, one_hot_indices, 1)
 
         # The distributed autograd context is the dedicated scope for the
+        # 分布式自动求导上下文为
         # distributed backward pass to store gradients, which can later be
+        # 分布式反向传播提供专门的梯度存储作用域，之后
         # retrieved using the context_id by the distributed optimizer.
+        # 分布式优化器可通过 context_id 取回梯度。
         with dist_autograd.context() as context_id:
             outputs = model(inputs)
             dist_autograd.backward(context_id, [loss_fn(outputs, labels)])
@@ -253,6 +278,7 @@ def run_worker(rank, world_size, num_split):
     os.environ['MASTER_PORT'] = '29500'
 
     # Higher timeout is added to accommodate for kernel compilation time in case of ROCm.
+    # 增加超时时间，以容纳 ROCm 环境中的内核编译时间。
     options = rpc.TensorPipeRpcBackendOptions(num_worker_threads=256, rpc_timeout=300)
 
     if rank == 0:
@@ -273,11 +299,13 @@ def run_worker(rank, world_size, num_split):
         pass
 
     # block until all rpcs finish
+    # 阻塞等待所有 RPC 完成。
     rpc.shutdown()
 
 
 if __name__=="__main__":
     # Suppress torch compile profiler warnings
+    # 屏蔽 torch.compile 分析器相关警告。
     os.environ['TORCH_LOGS'] = '-dynamo'
     
     world_size = 3

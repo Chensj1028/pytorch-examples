@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
+    # 包含编码器、循环模块和解码器的容器模块。
 
     def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.5, tie_weights=False):
         super(RNNModel, self).__init__()
@@ -23,10 +24,14 @@ class RNNModel(nn.Module):
         self.decoder = nn.Linear(nhid, ntoken)
 
         # Optionally tie weights as in:
+        # 可选：按以下论文的方法共享权重：
         # "Using the Output Embedding to Improve Language Models" (Press & Wolf 2016)
+        # 《利用输出嵌入改进语言模型》（Press 与 Wolf，2016）。
         # https://arxiv.org/abs/1608.05859
         # and
+        # 以及
         # "Tying Word Vectors and Word Classifiers: A Loss Framework for Language Modeling" (Inan et al. 2016)
+        # 《共享词向量与词分类器：语言建模的损失框架》（Inan 等，2016）。
         # https://arxiv.org/abs/1611.01462
         if tie_weights:
             if nhid != ninp:
@@ -62,6 +67,7 @@ class RNNModel(nn.Module):
             return weight.new_zeros(self.nlayers, bsz, self.nhid)
 
 # Temporarily leave PositionalEncoding module here. Will be moved somewhere else.
+# 暂时将 PositionalEncoding 模块放在这里，之后移至其他位置。
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.
         The positional encodings have the same dimension as the embeddings, so that the two can be summed.
@@ -77,6 +83,12 @@ class PositionalEncoding(nn.Module):
     Examples:
         >>> pos_encoder = PositionalEncoding(d_model)
     """
+    # 为序列中的词元注入相对或绝对位置信息。
+    # 位置编码与嵌入具有相同维度，因此可以相加；这里使用不同频率的正弦与余弦函数。
+    # 偶数维：sin(pos / 10000^(2i/d_model))；奇数维：cos(pos / 10000^(2i/d_model))。
+    # pos 为词位置，i 为嵌入维度索引。
+    # 参数 d_model：嵌入维度，必填；dropout：丢弃比例，默认 0.1；max_len：最大输入序列长度，默认 5000。
+    # 示例：pos_encoder = PositionalEncoding(d_model)。
 
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
@@ -100,12 +112,17 @@ class PositionalEncoding(nn.Module):
         Examples:
             >>> output = pos_encoder(x)
         """
+        # forward 函数输入。
+        # 参数 x：输入位置编码器的序列，必填。
+        # 输入与输出形状均为 [序列长度，批大小，嵌入维度]。
+        # 调用示例：output = pos_encoder(x)。
 
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
 class TransformerModel(nn.Transformer):
     """Container module with an encoder, a recurrent or transformer module, and a decoder."""
+    # 包含编码器、循环模块或 Transformer 模块，以及解码器的容器模块。
 
     def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__(d_model=ninp, nhead=nhead, dim_feedforward=nhid, num_encoder_layers=nlayers)

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 """
 Adapted from https://github.com/karpathy/minGPT/blob/master/projects/chargpt/chargpt.py
 """
+# 改编自上方所列的 minGPT 字符级 GPT 项目。
 
 @dataclass
 class DataConfig:
@@ -35,8 +36,10 @@ class CharDataset(Dataset):
 
     def __getitem__(self, idx):
         # grab a chunk of (block_size + 1) characters from the data
+        # 从数据中取出长度为 block_size + 1 的字符片段。
         chunk = self.data[idx:idx + self.block_size + 1]
         # encode every character to an integer
+        # 将每个字符编码为整数。
         dix = [self.stoi[s] for s in chunk]
         x = torch.tensor(dix[:-1], dtype=torch.long)
         y = torch.tensor(dix[1:], dtype=torch.long)

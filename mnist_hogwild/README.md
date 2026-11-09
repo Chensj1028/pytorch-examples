@@ -1,11 +1,15 @@
 # MNIST Hogwild Example
 
+MNIST Hogwild 多进程训练示例
+
 ```bash
 pip install -r requirements.txt
 python main.py
 ```
 
 The main.py script accepts the following arguments:
+
+`main.py` 脚本接受以下参数：
 
 ```bash
 optional arguments:

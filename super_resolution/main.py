@@ -10,6 +10,7 @@ from model import Net
 from data import get_training_set, get_test_set
 
 # Training settings
+# 训练设置。
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
 parser.add_argument('--upscale_factor', type=int, required=True, help="super resolution upscale factor")
 parser.add_argument('--batchSize', type=int, default=64, help='training batch size')

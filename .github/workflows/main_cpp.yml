@@ -7,6 +7,7 @@ on:
     branches: [ main ]
   schedule:
     # Every day at 3:00am
+    # 每天凌晨 3:00。
     - cron: '0 3 * * *'
 
 
@@ -40,6 +41,7 @@ jobs:
         cmake -DARGPARSE_BUILD_SAMPLES=off -DARGPARSE_BUILD_TESTS=off ..
         sudo make install
     # Alternatively, you can install OpenCV from source
+    # 也可以从源码安装 OpenCV。
     # - name: Install OpenCV from source
     #   run: |
         # wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip

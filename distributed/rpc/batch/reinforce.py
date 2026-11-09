@@ -6,6 +6,7 @@ import time
 import warnings
 
 # Suppress deprecated ProcessGroup warning
+# 屏蔽已弃用的 ProcessGroup 警告。
 warnings.filterwarnings("ignore", message="You are using a Backend.*ProcessGroup")
 
 import torch
@@ -18,6 +19,7 @@ from torch.distributed.rpc import RRef, rpc_sync, rpc_async, remote
 from torch.distributions import Categorical
 
 # demonstrating using rpc.functions.async_execution to speed up training
+# 演示如何使用 rpc.functions.async_execution 加速训练。
 
 NUM_STEPS = 500
 AGENT_NAME = "agent"
@@ -43,6 +45,9 @@ class Policy(nn.Module):
     Copying the code to make these two examples independent.
     See https://github.com/pytorch/examples/tree/main/reinforcement_learning
     """
+    # 借用强化学习示例中的 Policy 类。
+    # 复制代码是为了让两个示例相互独立。
+    # 原示例见上方仓库链接。
     def __init__(self, batch=True):
         super(Policy, self).__init__()
         self.affine1 = nn.Linear(4, 128)
@@ -71,6 +76,10 @@ class Observer:
     an application using the RPC API. Developers can extend the similar idea to
     other applications with much more expensive environment.
     """
+    # 每个观察者独占自己的环境，读取环境状态并发送给智能体，
+    # 由智能体选择动作；观察者执行该动作，再向智能体报告奖励。
+    # CartPole-v1 的环境开销较小，在此场景中通过 RPC 连接观察者与训练进程可能显得复杂。
+    # 本教程的主要目标是演示 RPC API 的应用结构，这种思路可扩展到环境开销更大的应用。
     def __init__(self, batch=True):
         self.id = rpc.get_worker_info().id - 1
         self.env = gym.make('CartPole-v1')
@@ -85,6 +94,9 @@ class Observer:
             agent_rref (RRef): an RRef referencing the agent object.
             n_steps (int): number of steps in this episode
         """
+        # 运行一个包含 n_steps 步的回合。
+        # 参数 agent_rref（RRef）：指向智能体对象的远程引用。
+        # 参数 n_steps（int）：当前回合的步数。
         state, _ = self.env.reset()
         ep_reward = NUM_STEPS
         rewards = torch.zeros(n_steps)
@@ -92,6 +104,7 @@ class Observer:
         for step in range(n_steps):
             state = torch.from_numpy(state).float().unsqueeze(0)
             # send the state to the agent to get an action
+            # 将状态发送给智能体，以获取动作。
             action = rpc.rpc_sync(
                 agent_rref.owner(),
                 self.select_action,
@@ -99,6 +112,7 @@ class Observer:
             )
 
             # apply the action to the environment, and get the reward
+            # 在环境中执行动作，并获得奖励。
             state, reward, terminated, truncated, _ = self.env.step(action)
             rewards[step] = reward
 
@@ -133,9 +147,13 @@ class Agent:
         self.states = torch.zeros(len(self.ob_rrefs), 1, 4)
         self.batch = batch
         # With batching, saved_log_probs contains a list of tensors, where each
+        # 启用批处理时，saved_log_probs 是张量列表，列表中的每个
         # tensor contains probs from all observers in one step.
+        # 张量包含同一步中所有观察者的概率。
         # Without batching, saved_log_probs is a dictionary where the key is the
+        # 未启用批处理时，saved_log_probs 是字典，键为
         # observer id and the value is a list of probs for that observer.
+        # 观察者编号，值为该观察者的概率列表。
         self.saved_log_probs = [] if self.batch else {k:[] for k in range(len(self.ob_rrefs))}
         self.future_actions = torch.futures.Future()
         self.lock = threading.Lock()
@@ -150,6 +168,8 @@ class Agent:
         number of CUDA kernels launched and hence speed up amortized inference
         speed.
         """
+        # 批量选择动作：每一步等待所有观察者的状态，再统一处理。
+        # 这样可减少启动 CUDA 内核的次数，提高摊销后的推理速度。
         self = agent_rref.local_value()
         self.states[ob_id].copy_(state)
         future_action = self.future_actions.then(
@@ -174,6 +194,7 @@ class Agent:
         r"""
         Non-batching select_action, return the action right away.
         """
+        # 非批量动作选择：立即返回动作。
         self = agent_rref.local_value()
         probs = self.policy(state.cuda())
         m = Categorical(probs)
@@ -187,12 +208,16 @@ class Agent:
         with n_steps. Then it collects all actions and rewards, and use those to
         train the policy.
         """
+        # 运行一个回合：智能体要求每个观察者运行 n_steps 步，
+        # 然后收集所有动作和奖励，用于训练策略。
         futs = []
         for ob_rref in self.ob_rrefs:
             # make async RPC to kick off an episode on all observers
+            # 通过异步 RPC，让所有观察者开始一个回合。
             futs.append(ob_rref.rpc_async().run_episode(self.agent_rref, n_steps))
 
         # wait until all obervers have finished this episode
+        # 等待所有观察者完成当前回合。
         rets = torch.futures.wait_all(futs)
         rewards = torch.stack([ret[0] for ret in rets]).cuda().t()
         ep_rewards = sum([ret[1] for ret in rets]) / len(rets)
@@ -209,10 +234,12 @@ class Agent:
         self.optimizer.zero_grad()
 
         # reset variables
+        # 重置变量。
         self.saved_log_probs = [] if self.batch else {k:[] for k in range(len(self.ob_rrefs))}
         self.states = torch.zeros(len(self.ob_rrefs), 1, 4)
 
         # calculate running rewards
+        # 计算运行中的奖励统计。
         self.running_reward = 0.5 * ep_rewards + 0.5 * self.running_reward
         return ep_rewards, self.running_reward
 
@@ -222,10 +249,12 @@ def run_worker(rank, world_size, n_episode, batch, print_log=True):
     This is the entry point for all processes. The rank 0 is the agent. All
     other ranks are observers.
     """
+    # 所有进程的入口：rank 0 为智能体，其余进程为观察者。
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '29500'
     if rank == 0:
         # rank0 is the agent
+        # rank 0 为智能体。
         rpc.init_rpc(AGENT_NAME, rank=rank, world_size=world_size)
 
         agent = Agent(world_size, batch)
@@ -236,8 +265,10 @@ def run_worker(rank, world_size, n_episode, batch, print_log=True):
                 print(f'Episode {i_episode}\tLast reward: {last_reward:.2f}\tAverage reward: {running_reward:.2f}')
     else:
         # other ranks are the observer
+        # 其余进程为观察者。
         rpc.init_rpc(OBSERVER_NAME.format(rank), rank=rank, world_size=world_size)
         # observers passively waiting for instructions from agents
+        # 观察者被动等待智能体的指令。
     rpc.shutdown()
 
 

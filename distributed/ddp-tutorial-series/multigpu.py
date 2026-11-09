@@ -16,6 +16,9 @@ def ddp_setup(rank, world_size):
         rank: Unique identifier of each process
         world_size: Total number of processes
     """
+    # 参数：
+    # rank：每个进程的唯一编号。
+    # world_size：进程总数。
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "12355"
     torch.cuda.set_device(rank)
@@ -68,7 +71,9 @@ class Trainer:
 
 def load_train_objs():
     train_set = MyTrainDataset(2048)  # load your dataset
+    # 加载数据集。
     model = torch.nn.Linear(20, 1)  # load your model
+    # 加载模型。
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     return train_set, model, optimizer
 

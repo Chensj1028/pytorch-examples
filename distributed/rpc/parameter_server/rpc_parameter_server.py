@@ -13,6 +13,7 @@ from torch.distributed.optim import DistributedOptimizer
 from torchvision import datasets, transforms
 
 # --------- MNIST Network to train, from pytorch/examples -----
+# 用于训练的 MNIST 网络，来自 pytorch/examples。
 
 
 class Net(nn.Module):
@@ -27,9 +28,11 @@ class Net(nn.Module):
             device = torch.device("cpu")
         print(f"Putting first 2 convs on {str(device)}")
         # Put conv layers on the first accelerator device
+        # 将卷积层放在第一个加速设备上。
         self.conv1 = nn.Conv2d(1, 32, 3, 1).to(device)
         self.conv2 = nn.Conv2d(32, 64, 3, 1).to(device)
         # Put rest of the network on the 2nd accelerator device, if there is one
+        # 如果有第二个加速设备，则将网络其余部分放到该设备上。
         if torch.accelerator.is_available() and self.num_gpus > 0:
             acc = torch.accelerator.current_accelerator()
             device = torch.device(f'{acc}:1')
@@ -49,6 +52,7 @@ class Net(nn.Module):
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         # Move tensor to next device if necessary
+        # 必要时将张量移动到下一个设备。
         next_device = next(self.fc1.parameters()).device
         x = x.to(next_device)
 
@@ -61,26 +65,38 @@ class Net(nn.Module):
 
 
 # --------- Helper Methods --------------------
+# 辅助方法。
 
 # On the local node, call a method with first arg as the value held by the
+# 在本地节点调用方法，第一个参数为
 # RRef. Other args are passed in as arguments to the function called.
+# RRef 引用的值，其余参数直接传给被调用函数。
 # Useful for calling instance methods.
+# 适合调用实例方法。
 def call_method(method, rref, *args, **kwargs):
     return method(rref.local_value(), *args, **kwargs)
 
 # Given an RRef, return the result of calling the passed in method on the value
+# 给定 RRef，在它所引用的值上调用指定方法并返回结果。
 # held by the RRef. This call is done on the remote node that owns
+# 调用发生在拥有该 RRef 的远程节点上，
 # the RRef. args and kwargs are passed into the method.
+# args 和 kwargs 会传给目标方法。
 # Example: If the value held by the RRef is of type Foo, then
+# 例如，若 RRef 引用的对象类型为 Foo，
 # remote_method(Foo.bar, rref, arg1, arg2) is equivalent to calling
+# remote_method(Foo.bar, rref, arg1, arg2) 等价于
 # <foo_instance>.bar(arg1, arg2) on the remote node and getting the result
+# 在远程节点调用 <foo_instance>.bar(arg1, arg2)，
 # back.
+# 再取回结果。
 
 def remote_method(method, rref, *args, **kwargs):
     args = [method, rref] + list(args)
     return rpc.rpc_sync(rref.owner(), call_method, args=args, kwargs=kwargs)
 
 # --------- Parameter Server --------------------
+# 参数服务器。
 class ParameterServer(nn.Module):
     def __init__(self, num_gpus=0):
         super().__init__()
@@ -96,16 +112,22 @@ class ParameterServer(nn.Module):
         inp = inp.to(self.input_device)
         out = self.model(inp)
         # This output is forwarded over RPC, which as of 1.5.0 only accepts CPU tensors.
+        # 此输出通过 RPC 转发；原注释针对 1.5.0，当时仅接受 CPU 张量。
         # Tensors must be moved in and out of GPU memory due to this.
+        # 因此需要在 GPU 内存与 CPU 内存之间移动张量。
         out = out.to("cpu")
         return out
 
     # Use dist autograd to retrieve gradients accumulated for this model.
+    # 通过分布式自动求导获取此模型累积的梯度。
     # Primarily used for verification.
+    # 主要用于验证。
     def get_dist_gradients(self, cid):
         grads = dist_autograd.get_gradients(cid)
         # This output is forwarded over RPC, which as of 1.5.0 only accepts CPU tensors.
+        # 此输出通过 RPC 转发；原注释针对 1.5.0，当时仅接受 CPU 张量。
         # Tensors must be moved in and out of GPU memory due to this.
+        # 因此需要在 GPU 内存与 CPU 内存之间移动张量。
         cpu_grads = {}
         for k, v in grads.items():
             k_cpu, v_cpu = k.to("cpu"), v.to("cpu")
@@ -113,7 +135,9 @@ class ParameterServer(nn.Module):
         return cpu_grads
 
     # Wrap local parameters in a RRef. Needed for building the
+    # 将本地参数包装为 RRef，以便构建
     # DistributedOptimizer which optimizes parameters remotely.
+    # 远程优化参数的 DistributedOptimizer。
     def get_param_rrefs(self):
         param_rrefs = [rpc.RRef(param) for param in self.model.parameters()]
         return param_rrefs
@@ -124,19 +148,26 @@ global_lock = Lock()
 def get_parameter_server(num_gpus=0):
     global param_server
     # Ensure that we get only one handle to the ParameterServer.
+    # 确保只获取一个 ParameterServer 实例句柄。
     with global_lock:
         if not param_server:
             # construct it once
+            # 只构建一次。
             param_server = ParameterServer(num_gpus=num_gpus)
         return param_server
 
 
 def run_parameter_server(rank, world_size):
     # The parameter server just acts as a host for the model and responds to
+    # 参数服务器只负责托管模型并响应
     # requests from trainers, hence it does not need to run a loop.
+    # 训练进程的请求，因此不需要运行循环。
     # rpc.shutdown() will wait for all workers to complete by default, which
+    # rpc.shutdown() 默认等待所有工作进程完成，
     # in this case means that the parameter server will wait for all trainers
+    # 此处意味着参数服务器等待所有训练进程
     # to complete, and then exit.
+    # 完成后再退出。
     print("PS master initializing RPC")
     rpc.init_rpc(name="parameter_server", rank=rank, world_size=world_size)
     print("RPC initialized! Running parameter server...")
@@ -145,10 +176,14 @@ def run_parameter_server(rank, world_size):
 
 
 # --------- Trainers --------------------
+# 训练进程。
 
 # nn.Module corresponding to the network trained by this trainer. The
+# 此 nn.Module 对应当前训练进程训练的网络。
 # forward() method simply invokes the network on the given parameter
+# forward() 方法只需调用指定参数
 # server.
+# 服务器上的网络。
 class TrainerNet(nn.Module):
     def __init__(self, num_gpus=0):
         super().__init__()
@@ -170,9 +205,12 @@ class TrainerNet(nn.Module):
 
 def run_training_loop(rank, num_gpus, train_loader, test_loader):
     # Runs the typical neural network forward + backward + optimizer step, but
+    # 以分布式方式执行典型的神经网络
     # in a distributed fashion.
+    # 前向传播、反向传播及优化器更新。
     net = TrainerNet(num_gpus=num_gpus)
     # Build DistributedOptimizer.
+    # 构建 DistributedOptimizer。
     param_rrefs = net.get_global_param_rrefs()
     opt = DistributedOptimizer(optim.SGD, param_rrefs, lr=0.03)
     for i, (data, target) in enumerate(train_loader):
@@ -184,7 +222,9 @@ def run_training_loop(rank, num_gpus, train_loader, test_loader):
                 print(f"Rank {rank} training batch {i} loss {loss.item()}")
             dist_autograd.backward(cid, [loss])
             # Ensure that dist autograd ran successfully and gradients were
+            # 确认分布式自动求导已成功运行，
             # returned.
+            # 并已返回梯度。
             assert remote_method(
                 ParameterServer.get_dist_gradients,
                 net.param_server_rref,
@@ -200,6 +240,7 @@ def get_accuracy(test_loader, model):
     model.eval()
     correct_sum = 0
     # Use GPU to evaluate if possible
+    # 尽可能使用 GPU 评估。
     if torch.accelerator.is_available() and model.num_gpus > 0:
         acc = torch.accelerator.current_accelerator()
         device = torch.device(f'{acc}:0')
@@ -217,6 +258,7 @@ def get_accuracy(test_loader, model):
 
 
 # Main loop for trainers.
+# 训练进程的主循环。
 def run_worker(rank, world_size, num_gpus, train_loader, test_loader):
     print(f"Worker rank {rank} initializing RPC")
     rpc.init_rpc(
@@ -230,6 +272,7 @@ def run_worker(rank, world_size, num_gpus, train_loader, test_loader):
     rpc.shutdown()
 
 # --------- Launcher --------------------
+# 启动器。
 
 
 if __name__ == '__main__':
@@ -274,7 +317,9 @@ if __name__ == '__main__':
     world_size = args.world_size
 
     # Note that Linux uses "fork" by default, which may cause deadlock.
+    # 原注释指出 Linux 默认使用 fork，可能导致死锁；实际默认方式取决于 Python 版本。
     # Besides, cuda doesn't support "fork" and Windows only supports "spawn"
+    # 此外，CUDA 不支持 fork，Windows 仅支持 spawn。
     mp.set_start_method("spawn")
 
     if args.rank == 0:
@@ -283,6 +328,7 @@ if __name__ == '__main__':
         processes.append(p)
     else:
         # Get data to train on
+        # 获取训练数据。
         train_loader = torch.utils.data.DataLoader(
             datasets.MNIST('../data', train=True, download=True,
                            transform=transforms.Compose([
@@ -298,6 +344,7 @@ if __name__ == '__main__':
                            ])),
             batch_size=32, shuffle=True)
         # start training worker on this node
+        # 在当前节点启动训练工作进程。
         p = mp.Process(
             target=run_worker,
             args=(

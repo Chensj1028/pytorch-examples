@@ -1,11 +1,19 @@
 # MNIST Example with the PyTorch C++ Frontend
 
+使用 PyTorch C++ 前端识别 MNIST 手写数字
+
 This folder contains an example of training a computer vision model to recognize
 digits in images from the MNIST dataset, using the PyTorch C++ frontend.
 
+本目录展示如何通过 PyTorch C++ 前端训练计算机视觉模型，识别 MNIST 图片中的手写数字。
+
 The entire training code is contained in `mnist.cpp`.
 
+完整训练代码位于 `mnist.cpp`。
+
 To build the code, run the following commands from your terminal:
+
+在终端执行以下命令构建代码：
 
 ```shell
 $ cd mnist
@@ -19,7 +27,11 @@ where `/path/to/libtorch` should be the path to the unzipped _LibTorch_
 distribution, which you can get from the [PyTorch
 homepage](https://pytorch.org/get-started/locally/).
 
+其中 `/path/to/libtorch` 应替换为解压后的 LibTorch 目录。LibTorch 可从 [PyTorch 官网](https://pytorch.org/get-started/locally/)获取。
+
 Execute the compiled binary to train the model:
+
+运行编译生成的可执行文件来训练模型：
 
 ```shell
 $ ./mnist

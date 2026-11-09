@@ -3,6 +3,7 @@
 #include <iostream>
 
 // Define a Convolutional Module
+// 定义卷积模块。
 struct Model : torch::nn::Module {
   Model()
       : conv1(torch::nn::Conv2dOptions(1, 10, 5)),
@@ -49,14 +50,18 @@ void waitWork(
 
 int main(int argc, char* argv[]) {
   // Creating MPI Process Group
+  // 创建 MPI 进程组。
   auto pg = c10d::ProcessGroupMPI::createProcessGroupMPI();
 
   // Retrieving MPI environment variables
+  // 读取 MPI 环境变量。
   auto numranks = pg->getSize();
   auto rank = pg->getRank();
 
   // TRAINING
+  // 训练。
   // Read train dataset
+  // 读取训练数据集。
   const char* kDataRoot = "../data";
   auto train_dataset =
       torch::data::datasets::MNIST(kDataRoot)
@@ -64,19 +69,23 @@ int main(int argc, char* argv[]) {
           .map(torch::data::transforms::Stack<>());
 
   // Distributed Random Sampler
+  // 分布式随机采样器。
   auto data_sampler = torch::data::samplers::DistributedRandomSampler(
       train_dataset.size().value(), numranks, rank, false);
 
   auto num_train_samples_per_proc = train_dataset.size().value() / numranks;
 
   // Generate dataloader
+  // 创建数据加载器。
   auto total_batch_size = 64;
   auto batch_size_per_proc =
       total_batch_size / numranks; // effective batch size in each processor
+      // 每个处理器上的有效批大小。
   auto data_loader = torch::data::make_data_loader(
       std::move(train_dataset), data_sampler, batch_size_per_proc);
 
   // setting manual seed
+  // 设置随机种子。
   torch::manual_seed(0);
 
   auto model = std::make_shared<Model>();
@@ -86,6 +95,7 @@ int main(int argc, char* argv[]) {
   torch::optim::SGD optimizer(model->parameters(), learning_rate);
 
   // Number of epochs
+  // 训练轮数。
   size_t num_epochs = 10;
 
   for (size_t epoch = 1; epoch <= num_epochs; ++epoch) {
@@ -96,25 +106,34 @@ int main(int argc, char* argv[]) {
       auto op = batch.target.squeeze();
 
       // convert to required formats
+      // 转换为所需格式。
       ip = ip.to(torch::kF32);
       op = op.to(torch::kLong);
 
       // Reset gradients
+      // 清空梯度。
       model->zero_grad();
 
       // Execute forward pass
+      // 执行前向传播。
       auto prediction = model->forward(ip);
 
       auto loss = torch::nll_loss(torch::log_softmax(prediction, 1), op);
 
       // Backpropagation
+      // 反向传播。
       loss.backward();
 
       // Averaging the gradients of the parameters in all the processors
+      // 对所有处理器上的参数梯度求平均。
       // Note: This may lag behind DistributedDataParallel (DDP) in performance
+      // 注意：这里的性能可能不及 DistributedDataParallel（DDP），
       // since this synchronizes parameters after backward pass while DDP
+      // 因为这里在反向传播后同步参数，而 DDP
       // overlaps synchronizing parameters and computing gradients in backward
+      // 会让参数同步与反向传播中的梯度计算
       // pass
+      // 重叠执行。
       std::vector<std::shared_ptr<::c10d::ProcessGroup::Work>> works;
       for (auto& param : model->named_parameters()) {
         std::vector<torch::Tensor> tmp = {param.value().grad()};
@@ -129,11 +148,13 @@ int main(int argc, char* argv[]) {
       }
 
       // Update parameters
+      // 更新参数。
       optimizer.step();
 
       auto guess = prediction.argmax(1);
       num_correct += torch::sum(guess.eq_(op)).item<int64_t>();
     } // end batch loader
+    // 批次加载循环结束。
 
     auto accuracy = 100.0 * num_correct / num_train_samples_per_proc;
 
@@ -141,8 +162,10 @@ int main(int argc, char* argv[]) {
               << accuracy << std::endl;
 
   } // end epoch
+  // 本轮训练结束。
 
   // TESTING ONLY IN RANK 0
+  // 仅在 rank 为 0 的进程中测试。
   if (rank == 0) {
     auto test_dataset =
         torch::data::datasets::MNIST(
@@ -155,6 +178,7 @@ int main(int argc, char* argv[]) {
         std::move(test_dataset), num_test_samples);
 
     model->eval(); // enable eval mode to prevent backprop
+    // 启用评估模式；原注释将其描述为防止反向传播，但评估模式本身不会关闭梯度跟踪。
 
     size_t num_correct = 0;
 
@@ -163,6 +187,7 @@ int main(int argc, char* argv[]) {
       auto op = batch.target.squeeze();
 
       // convert to required format
+      // 转换为所需格式。
       ip = ip.to(torch::kF32);
       op = op.to(torch::kLong);
 
@@ -177,9 +202,11 @@ int main(int argc, char* argv[]) {
       num_correct += torch::sum(guess.eq_(op)).item<int64_t>();
 
     } // end test loader
+    // 测试数据加载循环结束。
 
     std::cout << "Num correct - " << num_correct << std::endl;
     std::cout << "Test Accuracy - " << 100.0 * num_correct / num_test_samples
               << std::endl;
   } // end rank 0
+  // rank 为 0 的处理分支结束。
 }

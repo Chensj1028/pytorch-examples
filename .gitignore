@@ -18,13 +18,16 @@ docs/build
 docs/venv
 
 # vi backups
+# vi 编辑器的备份文件。
 *~
 
 # development
+# 开发环境文件。
 .vscode
 **/.DS_Store
 
 # Local MNIST environment and generated outputs
+# 本地 MNIST 环境及生成的输出。
 /.venv/
 /mnist/mnist_cnn.pt
 /mnist/training.log

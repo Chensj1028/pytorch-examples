@@ -1,28 +1,48 @@
 # Word-level Language Modeling using RNN and Transformer
 
+使用 RNN 和 Transformer 进行词级语言建模
+
 This example trains a multi-layer RNN (Elman, GRU, or LSTM) or Transformer on a language modeling task. By default, the training script uses the Wikitext-2 dataset, provided.
 The trained model can then be used by the generate script to generate new text.
 
+本示例训练多层 RNN（Elman、GRU 或 LSTM）或 Transformer 来完成语言建模任务。训练脚本默认使用随示例提供的 Wikitext-2 数据集。
+训练后的模型可以通过生成脚本产生新文本。
+
 ```bash
 python main.py --accel --epochs 6           # Train a LSTM on Wikitext-2.
+# 在 WikiText-2 上训练 LSTM。
 python main.py --accel --epochs 6 --tied    # Train a tied LSTM on Wikitext-2.
+# 在 WikiText-2 上训练共享权重的 LSTM。
 python main.py --accel --tied               # Train a tied LSTM on Wikitext-2for 40 epochs.
+# 在 WikiText-2 上训练共享权重的 LSTM，共 40 轮。
 python main.py --accel --epochs 6 --model Transformer --lr 5
                                             # Train a Transformer model on Wikitext-2.
+                                            # 在 WikiText-2 上训练 Transformer 模型。
 python main.py --accel --epochs 6 --model Transformer --use-optimizer --lr 0.001
                                             # Train a Transformer model with AdamW optimizer on Wikitext-2.
+                                            # 在 WikiText-2 上使用 AdamW 优化器训练 Transformer 模型。
 
 python generate.py --accel                  # Generate samples from the default model checkpoint.
+# 从默认模型检查点生成样本。
 ```
 
 > [!NOTE] 
 > Example supports running on acceleration devices (CUDA, MPS, XPU)
 
+> [!NOTE]
+> 本示例支持使用 CUDA、MPS、XPU 加速设备运行。
+
 The model uses the `nn.RNN` module (and its sister modules `nn.GRU` and `nn.LSTM`) or Transformer module (`nn.TransformerEncoder` and `nn.TransformerEncoderLayer`) which will automatically use the cuDNN backend if run on CUDA with cuDNN installed.
+
+模型使用 `nn.RNN` 模块及其相关模块 `nn.GRU`、`nn.LSTM`，或者 Transformer 模块 `nn.TransformerEncoder`、`nn.TransformerEncoderLayer`。RNN 系列模块在 CUDA 环境中满足条件且已安装 cuDNN 时，会自动使用 cuDNN 后端。
 
 During training, if a keyboard interrupt (Ctrl-C) is received, training is stopped and the current model is evaluated against the test dataset.
 
+训练过程中按 Ctrl-C 触发键盘中断时，程序会停止训练，并用测试集评估当前模型。
+
 The `main.py` script accepts the following arguments:
+
+`main.py` 脚本接受以下参数：
 
 ```bash
 optional arguments:
@@ -52,6 +72,8 @@ optional arguments:
 
 With these arguments, a variety of models can be tested.
 As an example, the following arguments produce slower but better models:
+
+可以通过这些参数测试不同模型。例如，下列配置训练较慢，但通常能得到更好的模型：
 
 ```bash
 python main.py --accel --emsize 650 --nhid 650 --dropout 0.5 --epochs 40

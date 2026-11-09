@@ -5,6 +5,7 @@ class TransformerNet(torch.nn.Module):
     def __init__(self):
         super(TransformerNet, self).__init__()
         # Initial convolution layers
+        # 起始卷积层。
         self.conv1 = ConvLayer(3, 32, kernel_size=9, stride=1)
         self.in1 = torch.nn.InstanceNorm2d(32, affine=True)
         self.conv2 = ConvLayer(32, 64, kernel_size=3, stride=2)
@@ -12,18 +13,21 @@ class TransformerNet(torch.nn.Module):
         self.conv3 = ConvLayer(64, 128, kernel_size=3, stride=2)
         self.in3 = torch.nn.InstanceNorm2d(128, affine=True)
         # Residual layers
+        # 残差层。
         self.res1 = ResidualBlock(128)
         self.res2 = ResidualBlock(128)
         self.res3 = ResidualBlock(128)
         self.res4 = ResidualBlock(128)
         self.res5 = ResidualBlock(128)
         # Upsampling Layers
+        # 上采样层。
         self.deconv1 = UpsampleConvLayer(128, 64, kernel_size=3, stride=1, upsample=2)
         self.in4 = torch.nn.InstanceNorm2d(64, affine=True)
         self.deconv2 = UpsampleConvLayer(64, 32, kernel_size=3, stride=1, upsample=2)
         self.in5 = torch.nn.InstanceNorm2d(32, affine=True)
         self.deconv3 = ConvLayer(32, 3, kernel_size=9, stride=1)
         # Non-linearities
+        # 非线性激活函数。
         self.relu = torch.nn.ReLU()
 
     def forward(self, X):
@@ -59,6 +63,8 @@ class ResidualBlock(torch.nn.Module):
     introduced in: https://arxiv.org/abs/1512.03385
     recommended architecture: http://torch.ch/blog/2016/02/04/resnets.html
     """
+    # 残差块。
+    # 提出该结构的论文和推荐架构分别见原文中的两个链接。
 
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
@@ -82,6 +88,9 @@ class UpsampleConvLayer(torch.nn.Module):
     compared to ConvTranspose2d.
     ref: http://distill.pub/2016/deconv-checkerboard/
     """
+    # 上采样卷积层。
+    # 先对输入上采样，再执行卷积；原文指出其效果优于 ConvTranspose2d。
+    # 参考资料见上方链接。
 
     def __init__(self, in_channels, out_channels, kernel_size, stride, upsample=None):
         super(UpsampleConvLayer, self).__init__()
