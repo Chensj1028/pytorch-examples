@@ -80,6 +80,10 @@ function dcgan() {
   uv run main.py --dataset fake $ACCEL_FLAG --dry-run || error "dcgan failed"
 }
 
+function exercises() {
+  uv run 02_tensor.py || error "tensor exercise failed"
+}
+
 function fast_neural_style() {
   if [ ! -d "saved_models" ]; then
     echo "downloading saved models for fast neural style"
@@ -226,6 +230,7 @@ function run_all() {
   run dcgan
   # distributed moved to `run_distributed_examples.sh`
   # 分布式示例已移至 run_distributed_examples.sh。
+  run exercises
   run fast_neural_style
   run imagenet
   # language_translation
