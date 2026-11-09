@@ -3,6 +3,7 @@
 //  transfer-learning
 //
 //  Created by Kushashwa Ravi Shrimali on 12/08/19.
+// 由 Kushashwa Ravi Shrimali 于 2019 年 8 月 12 日创建。
 //
 
 #include "main.h"
@@ -19,6 +20,9 @@ torch::Tensor read_data(std::string location) {
      ===========
      torch::Tensor type - image read as tensor
     */
+    // 读取指定位置的图片，将其缩放为 (224, 224, 3)，并返回 torch::Tensor。
+    // 参数 location（std::string）：要加载的图片路径。
+    // 返回值：以张量表示的图片。
     cv::Mat img = cv::imread(location, 1);
     cv::resize(img, img, cv::Size(224, 224), cv::INTER_CUBIC);
     torch::Tensor img_tensor = torch::from_blob(img.data, {img.rows, img.cols, 3}, torch::kByte);
@@ -37,6 +41,9 @@ torch::Tensor read_label(int label) {
      ===========
      torch::Tensor type - label read as tensor
     */
+    // 将整数标签转换为 torch::Tensor：二分类使用 0、1，n 分类使用 0 到 n-1。
+    // 参数 label（int）：要转换的标签。
+    // 返回值：标签张量。
     torch::Tensor label_tensor = torch::full({1}, label);
     return label_tensor.clone();
 }
@@ -52,6 +59,9 @@ std::vector<torch::Tensor> process_images(std::vector<std::string> list_images) 
      ===========
      std::vector<torch::Tensor> type - Images read as tensors
      */
+    // 从目录中的图片路径列表读取图片，返回张量向量。
+    // 参数 list_images（std::vector<std::string>）：待读取的图片路径。
+    // 返回值 std::vector<torch::Tensor>：图片张量集合。
     std::vector<torch::Tensor> states;
     for(std::vector<std::string>::iterator it = list_images.begin(); it != list_images.end(); ++it) {
         torch::Tensor img = read_data(*it);
@@ -71,6 +81,9 @@ std::vector<torch::Tensor> process_labels(std::vector<int> list_labels) {
      ===========
      std::vector<torch::Tensor> type - returns vector of tensors (labels)
      */
+    // 将标签列表转换为张量向量。
+    // 参数 list_labels（std::vector<int>）：整数标签列表。
+    // 返回值 std::vector<torch::Tensor>：标签张量集合。
     std::vector<torch::Tensor> labels;
     for(std::vector<int>::iterator it = list_labels.begin(); it != list_labels.end(); ++it) {
         torch::Tensor label = read_label(*it);
@@ -91,6 +104,9 @@ std::pair<std::vector<std::string>,std::vector<int>> load_data_from_folder(std::
      ===========
      std::pair<std::vector<std::string>, std::vector<int>> type - returns pair of vector of strings (image paths) and respective labels' vector (int label)
      */
+    // 从指定目录加载数据，返回图片路径与对应整数标签的两个向量。
+    // 参数 folders_name（std::vector<std::string>）：要读取的目录名称列表。
+    // 返回值 std::pair<std::vector<std::string>, std::vector<int>>：图片路径和标签组成的数据对。
     std::vector<std::string> list_images;
     std::vector<int> list_labels;
     int label = 0;
@@ -137,6 +153,13 @@ void train(torch::jit::script::Module net, torch::nn::Linear lin, Dataloader& da
      ===========
      Nothing (void)
      */
+    // 使用数据加载器和优化器训练网络，并在每轮结束后将模型保存为 model.pt。
+    // 参数 net：移除最后一个全连接层的预训练 ScriptModule。
+    // 参数 lin：根据类别数量调整 out_features 后的最后一个全连接层。
+    // 参数 data_loader：训练数据加载器。
+    // 参数 optimizer：Adam、SGD 等优化器。
+    // 参数 dataset_size（size_t）：训练集大小。
+    // 无返回值（void）。
     float best_accuracy = 0.0; 
     int batch_index = 0;
     
@@ -149,6 +172,7 @@ void train(torch::jit::script::Module net, torch::nn::Linear lin, Dataloader& da
             auto target = batch.target.squeeze();
             
             // Should be of length: batch_size
+            // 长度应为 batch_size。
             data = data.to(torch::kF32);
             target = target.to(torch::kInt64);
             
@@ -158,6 +182,7 @@ void train(torch::jit::script::Module net, torch::nn::Linear lin, Dataloader& da
             
             auto output = net.forward(input).toTensor();
             // For transfer learning
+            // 用于迁移学习。
             output = output.view({output.size(0), -1});
             output = lin(output);
             
@@ -175,6 +200,7 @@ void train(torch::jit::script::Module net, torch::nn::Linear lin, Dataloader& da
         }
 
         mse = mse/float(batch_index); // Take mean of loss
+        // 对损失取平均。
         std::cout << "Epoch: " << i  << ", " << "Accuracy: " << Acc/dataset_size << ", " << "MSE: " << mse << std::endl;
 
         test(net, lin, data_loader, dataset_size);
@@ -204,6 +230,12 @@ void test(torch::jit::script::Module network, torch::nn::Linear lin, Dataloader&
      ===========
      Nothing (void)
      */
+    // 在测试数据上评估网络。
+    // 参数 network：移除最后一个全连接层的预训练 ScriptModule。
+    // 参数 lin：根据类别数量调整输出特征数后的最后一个全连接层。
+    // 参数 loader：测试数据加载器。
+    // 参数 data_size（size_t）：测试集大小。
+    // 无返回值（void）。
     network.eval();
     
     float Loss = 0, Acc = 0;
@@ -233,6 +265,7 @@ void test(torch::jit::script::Module network, torch::nn::Linear lin, Dataloader&
 
 int main(int argc, const char * argv[]) {
     // Set folder names for cat and dog images
+    // 设置猫和狗图片所在的目录名称。
     std::string cats_name = "/Users/krshrimali/Documents/krshrimali-blogs/dataset/train/cat_test";
     std::string dogs_name = "/Users/krshrimali/Documents/krshrimali-blogs/dataset/train/dog_test";
     
@@ -241,23 +274,31 @@ int main(int argc, const char * argv[]) {
     folders_name.push_back(dogs_name);
     
     // Get paths of images and labels as int from the folder paths
+    // 根据目录路径获取图片路径及整数标签。
     std::pair<std::vector<std::string>, std::vector<int>> pair_images_labels = load_data_from_folder(folders_name);
     
     std::vector<std::string> list_images = pair_images_labels.first;
     std::vector<int> list_labels = pair_images_labels.second;
     
     // Initialize CustomDataset class and read data
+    // 初始化 CustomDataset 类并读取数据。
     auto custom_dataset = CustomDataset(list_images, list_labels).map(torch::data::transforms::Stack<>());
 
     // Load pre-trained model
+    // 加载预训练模型。
     // You can also use: auto module = torch::jit::load(argv[1]);
+    // 也可以使用 auto module = torch::jit::load(argv[1])。
     torch::jit::script::Module module = torch::jit::load(argv[1]);
     
     // Resource: https://discuss.pytorch.org/t/how-to-load-the-prebuilt-resnet-models-or-any-other-prebuilt-models/40269/8
+    // 参考资料见上方链接。
     // For VGG: 512 * 14 * 14, 2
+    // 对于 VGG：输入特征数为 512×14×14，输出类别数为 2。
 
     torch::nn::Linear lin(512, 2); // the last layer of resnet, which we want to replace, has dimensions 512x1000
+    // 要替换的 ResNet 最后一层的维度为 512×1000。
     torch::optim::Adam opt(lin->parameters(), torch::optim::AdamOptions(1e-3 /*learning rate*/));
+    // 学习率。
 
     auto data_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(std::move(custom_dataset), 4);
 

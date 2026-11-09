@@ -37,8 +37,11 @@ class Attention(nn.Module):
         values = values.view(bsz, seq_len, self.n_heads, self.head_dim)
 
         queries = queries.transpose(1, 2)  # (bsz, n_heads, seq_len, head_dim)
+        # 形状依次为：批大小、注意力头数、序列长度、每个头的维度。
         keys = keys.transpose(1, 2)  # (bsz, n_heads, seq_len, head_dim)
+        # 形状依次为：批大小、注意力头数、序列长度、每个头的维度。
         values = values.transpose(1, 2)  # (bsz, n_heads, seq_len, head_dim)
+        # 形状依次为：批大小、注意力头数、序列长度、每个头的维度。
 
         output = F.scaled_dot_product_attention(
             queries,
@@ -96,6 +99,7 @@ class TransformerBlock(nn.Module):
 
 
 # A toy transformer model, partly inspired by the nanoGPT model:
+# 一个简化的 Transformer 模型，部分设计参考了 nanoGPT：
 # https://github.com/karpathy/nanoGPT.
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs):
@@ -119,6 +123,7 @@ class Transformer(nn.Module):
         h = self.tok_embeddings(tokens)
         pos = torch.arange(0, seq_len, device=tokens.device)
         p = self.pos_embeddings(pos)  # positional embeddings of shape (seq_len, dim)
+        # 位置嵌入的形状为（序列长度，维度）。
         h = h + p
         h = self.dropout(h)
         for layer in self.layers:

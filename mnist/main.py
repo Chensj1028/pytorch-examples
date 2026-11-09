@@ -108,8 +108,10 @@ def test(model, device, test_loader):
             output = model(data)
             # 累加本批所有样本的损失；item() 将单个数值的张量转成 Python 数值。
             test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+            # 累加各批次损失。
             # 沿类别维找最大值的下标，作为预测数字；结果形状是 [批大小, 1]。
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            # 获取对数概率最大项的索引。
             # 调整标签形状，与预测逐个比较，再累加识别正确的数量。
             correct += pred.eq(target.view_as(pred)).sum().item()
 

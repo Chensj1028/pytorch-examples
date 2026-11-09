@@ -54,6 +54,7 @@ parser.add_argument('--use-optimizer', action='store_true',
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
+# 手动设置随机种子，以便复现。
 torch.manual_seed(args.seed)
 
 if args.accel and torch.accelerator.is_available():
@@ -66,12 +67,15 @@ print("Using device:", device)
 
 ###############################################################################
 # Load data
+# 加载数据。
 ###############################################################################
 
 corpus = data.Corpus(args.data)
 
 # Starting from sequential data, batchify arranges the dataset into columns.
+# batchify 从连续序列开始，将数据集整理成多列。
 # For instance, with the alphabet as the sequence and batch size 4, we'd get
+# 例如，输入为字母表序列、批大小为 4 时，将得到
 # ┌ a g m s ┐
 # │ b h n t │
 # │ c i o u │
@@ -79,15 +83,21 @@ corpus = data.Corpus(args.data)
 # │ e k q w │
 # └ f l r x ┘.
 # These columns are treated as independent by the model, which means that the
+# 模型将各列视为独立序列，因此
 # dependence of e. g. 'g' on 'f' can not be learned, but allows more efficient
+# 无法学习跨列的依赖，例如 g 对 f 的依赖，但这样可以更高效地
 # batch processing.
+# 进行批处理。
 
 def batchify(data, bsz):
     # Work out how cleanly we can divide the dataset into bsz parts.
+    # 计算数据集可以完整划分成多少个含 bsz 个元素的分组。
     nbatch = data.size(0) // bsz
     # Trim off any extra elements that wouldn't cleanly fit (remainders).
+    # 去掉无法完整分组的多余元素，即余数部分。
     data = data.narrow(0, 0, nbatch * bsz)
     # Evenly divide the data across the bsz batches.
+    # 将数据均匀分成 bsz 列，对应各批次位置。
     data = data.view(bsz, -1).t().contiguous()
     return data.to(device)
 
@@ -98,6 +108,7 @@ test_data = batchify(corpus.test, eval_batch_size)
 
 ###############################################################################
 # Build the model
+# 构建模型。
 ###############################################################################
 
 ntokens = len(corpus.dictionary)
@@ -112,10 +123,12 @@ if args.use_optimizer:
 
 ###############################################################################
 # Training code
+# 训练代码。
 ###############################################################################
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors, to detach them from their history."""
+    # 用新张量包装隐藏状态，使其与此前的计算历史分离。
 
     if isinstance(h, torch.Tensor):
         return h.detach()
@@ -124,14 +137,21 @@ def repackage_hidden(h):
 
 
 # get_batch subdivides the source data into chunks of length args.bptt.
+# get_batch 将源数据切成长度为 args.bptt 的片段。
 # If source is equal to the example output of the batchify function, with
+# 若源数据与 batchify 函数示例的输出相同，且
 # a bptt-limit of 2, we'd get the following two Variables for i = 0:
+# bptt 上限为 2，则在 i = 0 时得到下面两个变量：
 # ┌ a g m s ┐ ┌ b h n t ┐
 # └ b h n t ┘ └ c i o u ┘
 # Note that despite the name of the function, the subdivison of data is not
+# 注意，虽然函数名称中有 batch，但此处的切分
 # done along the batch dimension (i.e. dimension 1), since that was handled
+# 不是沿批次维度，即第 1 维进行；那一步已经由
 # by the batchify function. The chunks are along dimension 0, corresponding
+# batchify 完成。这里沿第 0 维切分，
 # to the seq_len dimension in the LSTM.
+# 对应 LSTM 的序列长度维度。
 
 def get_batch(source, i):
     seq_len = min(args.bptt, len(source) - 1 - i)
@@ -142,6 +162,7 @@ def get_batch(source, i):
 
 def evaluate(data_source):
     # Turn on evaluation mode which disables dropout.
+    # 启用评估模式，关闭 Dropout。
     model.eval()
     total_loss = 0.
     ntokens = len(corpus.dictionary)
@@ -162,6 +183,7 @@ def evaluate(data_source):
 
 def train():
     # Turn on training mode which enables dropout.
+    # 启用训练模式，开启 Dropout。
     model.train()
     total_loss = 0.
     start_time = time.time()
@@ -171,7 +193,9 @@ def train():
     for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
         data, targets = get_batch(train_data, i)
         # Starting each batch, we detach the hidden state from how it was previously produced.
+        # 每个批次开始时，将隐藏状态与此前产生它的计算历史分离。
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
+        # 否则，模型会尝试一直反向传播到数据集的起点。
         if args.use_optimizer:
             optimizer.zero_grad()
         else:
@@ -186,6 +210,7 @@ def train():
         loss.backward()
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+        # clip_grad_norm 有助于防止 RNN/LSTM 中的梯度爆炸。
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
         if args.use_optimizer:
             optimizer.step()
@@ -217,10 +242,12 @@ def export_onnx(path, batch_size, seq_len):
 
 
 # Loop over epochs.
+# 按轮次循环。
 lr = args.lr
 best_val_loss = None
 
 # At any point you can hit Ctrl + C to break out of training early.
+# 随时按 Ctrl+C 可以提前结束训练。
 try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
@@ -232,18 +259,21 @@ try:
                                            val_loss, math.exp(val_loss)))
         print('-' * 89)
         # Save the model if the validation loss is the best we've seen so far.
+        # 若验证损失为目前最佳，则保存模型。
         if not best_val_loss or val_loss < best_val_loss:
             with open(args.save, 'wb') as f:
                 torch.save(model, f)
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
+            # 若验证集表现没有改善，则降低学习率。
             lr /= 4.0
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
 
 # Load the best saved model.
+# 加载保存的最佳模型。
 with open(args.save, 'rb') as f:
     if args.model == 'Transformer':
         safe_globals = [
@@ -273,12 +303,16 @@ with open(args.save, 'rb') as f:
     with torch.serialization.safe_globals(safe_globals):
         model = torch.load(f)
     # after load the rnn params are not a continuous chunk of memory
+    # 加载后，RNN 参数可能不位于连续的内存块中，
     # this makes them a continuous chunk, and will speed up forward pass
+    # 此操作将参数整理到连续内存，以加快前向传播。
     # Currently, only rnn model supports flatten_parameters function.
+    # 目前仅 RNN 模型支持 flatten_parameters 函数。
     if args.model in ['RNN_TANH', 'RNN_RELU', 'LSTM', 'GRU']:
         model.rnn.flatten_parameters()
 
 # Run on test data.
+# 在测试数据上运行。
 test_loss = evaluate(test_data)
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
@@ -287,4 +321,5 @@ print('=' * 89)
 
 if len(args.onnx_export) > 0:
     # Export the model in ONNX format.
+    # 将模型导出为 ONNX 格式。
     export_onnx(args.onnx_export, batch_size=1, seq_len=args.bptt)

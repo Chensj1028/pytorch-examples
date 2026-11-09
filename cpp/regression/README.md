@@ -1,8 +1,14 @@
 # Linear regression example
 
+C++ 线性回归示例
+
 Trains a single fully-connected layer to fit a 4th degree polynomial.
 
+训练单个全连接层，拟合一个四次多项式。
+
 To build the code, run the following commands from your terminal:
+
+在终端执行以下命令构建代码：
 
 ```shell
 $ cd regression
@@ -16,7 +22,11 @@ where `/path/to/libtorch` should be the path to the unzipped _LibTorch_
 distribution, which you can get from the [PyTorch
 homepage](https://pytorch.org/get-started/locally/).
 
+其中 `/path/to/libtorch` 应替换为解压后的 LibTorch 目录。LibTorch 可从 [PyTorch 官网](https://pytorch.org/get-started/locally/)获取。
+
 Execute the compiled binary to run:
+
+运行编译生成的可执行文件：
 
 ```shell
 $ ./regression

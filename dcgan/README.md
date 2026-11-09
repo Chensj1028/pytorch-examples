@@ -1,23 +1,39 @@
 # Deep Convolution Generative Adversarial Networks
 
+深度卷积生成对抗网络（DCGAN）
+
 This example implements the paper [Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks](http://arxiv.org/abs/1511.06434)
 
+本示例实现论文 [Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks](http://arxiv.org/abs/1511.06434)。
+
 The implementation is very close to the Torch implementation [dcgan.torch](https://github.com/soumith/dcgan.torch)
+
+实现方式与 Torch 版本 [dcgan.torch](https://github.com/soumith/dcgan.torch) 非常接近。
 
 After every 100 training iterations, the files `real_samples.png` and `fake_samples.png` are written to disk
 with the samples from the generative model.
 
+每训练 100 次迭代，程序会将真实样本和生成模型的样本写入 `real_samples.png`、`fake_samples.png`。
+
 After every epoch, models are saved to: `netG_epoch_%d.pth` and `netD_epoch_%d.pth`
+
+每轮训练结束后，模型保存为 `netG_epoch_%d.pth` 和 `netD_epoch_%d.pth`。
 
 ## Downloading the dataset
 
+下载数据集
+
 You can download the LSUN dataset by cloning [this repo](https://github.com/fyu/lsun) and running
+
+可以克隆 [LSUN 仓库](https://github.com/fyu/lsun)，然后运行以下命令下载 LSUN 数据集：
 
 ```
 python download.py -c bedroom
 ```
 
 ## Usage
+
+使用方法
 
 ```
 usage: main.py [-h] --dataset DATASET [--dataroot DATAROOT]

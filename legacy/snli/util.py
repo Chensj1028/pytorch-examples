@@ -4,6 +4,8 @@ from argparse import ArgumentParser
 def makedirs(name):
     """helper function for python 2 and 3 to call os.makedirs()
        avoiding an error if the directory to be created already exists"""
+    # 兼容 Python 2 和 3 的 os.makedirs() 辅助函数，
+    # 如果目标目录已存在，则避免报错。
 
     import os, errno
 
@@ -12,9 +14,11 @@ def makedirs(name):
     except OSError as ex:
         if ex.errno == errno.EEXIST and os.path.isdir(name):
             # ignore existing directory
+            # 忽略目录已存在的情况。
             pass
         else:
             # a different error happened
+            # 发生了其他错误。
             raise
 
 

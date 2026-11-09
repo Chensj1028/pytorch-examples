@@ -35,6 +35,7 @@ def _call_method(method, rref, *args, **kwargs):
     r"""
     a helper function to call a method on the given RRef
     """
+    # 在指定 RRef 上调用方法的辅助函数。
     return method(rref.local_value(), *args, **kwargs)
 
 
@@ -43,6 +44,7 @@ def _remote_method(method, rref, *args, **kwargs):
     a helper function to run method on the owner of rref and fetch back the
     result using RPC
     """
+    # 通过 RPC 在 RRef 所属节点运行方法，并取回结果的辅助函数。
     args = [method, rref] + list(args)
     return rpc_sync(rref.owner(), _call_method, args=args, kwargs=kwargs)
 
@@ -53,6 +55,9 @@ class Policy(nn.Module):
     Copying the code to make these two examples independent.
     See https://github.com/pytorch/examples/tree/main/reinforcement_learning
     """
+    # 借用强化学习示例中的 Policy 类。
+    # 复制代码是为了让两个示例相互独立。
+    # 原示例见上方仓库链接。
     def __init__(self):
         super(Policy, self).__init__()
         self.affine1 = nn.Linear(4, 128)
@@ -82,6 +87,10 @@ class Observer:
     an application using the RPC API. Developers can extend the similar idea to
     other applications with much more expensive environment.
     """
+    # 每个观察者独占自己的环境，读取环境状态并发送给智能体，
+    # 由智能体选择动作；观察者执行该动作，再向智能体报告奖励。
+    # CartPole-v1 的环境开销较小，在此场景中通过 RPC 连接观察者与训练进程可能显得复杂。
+    # 本教程的主要目标是演示 RPC API 的应用结构，这种思路可扩展到环境开销更大的应用。
     def __init__(self):
         self.id = rpc.get_worker_info().id
         self.env = gym.make('CartPole-v1')
@@ -95,15 +104,21 @@ class Observer:
             agent_rref (RRef): an RRef referencing the agent object.
             n_steps (int): number of steps in this episode
         """
+        # 运行一个包含 n_steps 步的回合。
+        # 参数 agent_rref（RRef）：指向智能体对象的远程引用。
+        # 参数 n_steps（int）：当前回合的步数。
         state, ep_reward = self.env.reset()[0], 0
         for step in range(n_steps):
             # send the state to the agent to get an action
+            # 将状态发送给智能体，以获取动作。
             action = _remote_method(Agent.select_action, agent_rref, self.id, state)
 
             # apply the action to the environment, and get the reward
+            # 在环境中执行动作，并获得奖励。
             state, reward, terminated, truncated, _ = self.env.step(action)
 
             # report the reward to the agent for training purpose
+            # 将奖励报告给智能体，用于训练。
             _remote_method(Agent.report_reward, agent_rref, self.id, reward)
 
             if terminated or truncated:
@@ -136,6 +151,9 @@ class Agent:
         NB: no need to enforce thread-safety here as GIL will serialize
         executions.
         """
+        # 此函数主要借用强化学习示例。
+        # 主要区别是：智能体将概率保存在字典中，每个观察者对应一个键，而不是使用单个列表。
+        # 原注释认为 GIL 会串行执行，因此这里无需额外保证线程安全。
         state = torch.from_numpy(state).float().unsqueeze(0)
         probs = self.policy(state)
         m = Categorical(probs)
@@ -147,15 +165,18 @@ class Agent:
         r"""
         Observers call this function to report rewards.
         """
+        # 观察者调用此函数报告奖励。
         self.rewards[ob_id].append(reward)
 
     def run_episode(self, n_steps=0):
         r"""
         Run one episode. The agent will tell each oberser to run n_steps.
         """
+        # 运行一个回合；智能体要求每个观察者运行 n_steps 步。
         futs = []
         for ob_rref in self.ob_rrefs:
             # make async RPC to kick off an episode on all observers
+            # 通过异步 RPC，让所有观察者开始一个回合。
             futs.append(
                 rpc_async(
                     ob_rref.owner(),
@@ -165,6 +186,7 @@ class Agent:
             )
 
         # wait until all obervers have finished this episode
+        # 等待所有观察者完成当前回合。
         for fut in futs:
             fut.wait()
 
@@ -176,18 +198,24 @@ class Agent:
         different observers into one list, and uses the minimum observer rewards
         as the reward of the current episode.
         """
+        # 此函数主要借用强化学习示例。
+        # 主要区别是：将不同观察者的概率和奖励合并到列表，
+        # 并使用各观察者奖励的最小值作为当前回合的奖励。
 
         # joins probs and rewards from different observers into lists
+        # 将不同观察者的概率与奖励分别合并到列表。
         R, probs, rewards = 0, [], []
         for ob_id in self.rewards:
             probs.extend(self.saved_log_probs[ob_id])
             rewards.extend(self.rewards[ob_id])
 
         # use the minimum observer reward to calculate the running reward
+        # 使用观察者奖励中的最小值计算运行奖励。
         min_reward = min([sum(self.rewards[ob_id]) for ob_id in self.rewards])
         self.running_reward = 0.05 * min_reward + (1 - 0.05) * self.running_reward
 
         # clear saved probs and rewards
+        # 清空保存的概率和奖励。
         for ob_id in self.rewards:
             self.rewards[ob_id] = []
             self.saved_log_probs[ob_id] = []
@@ -212,10 +240,12 @@ def run_worker(rank, world_size):
     This is the entry point for all processes. The rank 0 is the agent. All
     other ranks are observers.
     """
+    # 所有进程的入口：rank 0 为智能体，其余进程为观察者。
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '29500'
     if rank == 0:
         # rank0 is the agent
+        # rank 0 为智能体。
         rpc.init_rpc(AGENT_NAME, rank=rank, world_size=world_size)
 
         agent = Agent(world_size)
@@ -233,8 +263,10 @@ def run_worker(rank, world_size):
                 break
     else:
         # other ranks are the observer
+        # 其余进程为观察者。
         rpc.init_rpc(OBSERVER_NAME.format(rank), rank=rank, world_size=world_size)
         # observers passively waiting for instructions from agents
+        # 观察者被动等待智能体的指令。
     rpc.shutdown()
 
 

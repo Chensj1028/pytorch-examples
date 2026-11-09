@@ -1,23 +1,31 @@
 # This is a comment.
+# 这是一条注释。
 # Each line is a file pattern followed by one or more owners.
+# 每行先写文件匹配模式，后面列出一个或多个负责人。
 
 # Github Actions, tests and CI
+# GitHub Actions、测试和持续集成。
 ./github/ @msaroufim
 run_python_examples.sh @msaroufim
 
 # Distributed examples 
+# 分布式示例。
 # Can also add the distributed oncall
+# 也可以添加分布式模块的值班负责人。
 ./distributed/ @mrshenli @pritamdamania87 @rohan-varma @H-Huang
 ./mnist_hogwild/ @mrshenli @pritamdamania87 @rohan-varma @H-Huang
 
 # FX examples 
+# FX 示例。
 ./fx/ @jamesr66a @Chillee
 
 # Domain Examples 
+# 各领域示例。
 ./reinforcement_learning/ @msaroufim 
 ./word_language_model/ @msaroufim
 
 # Need an owner 
+# 需要指定负责人。
 ./regression/
 ./mnist/
 ./imagenet/
@@ -26,5 +34,6 @@ run_python_examples.sh @msaroufim
 ./vae/
 
 # Legacy examples
+# 旧版示例。
 ./cpp/
 ./legacy/snli/ 

@@ -9,8 +9,11 @@ add_executable(${PROJECT_NAME} "autograd.cpp")
 target_link_libraries(${PROJECT_NAME} "${TORCH_LIBRARIES}")
 
 # The following code block is suggested to be used on Windows.
+# 建议在 Windows 上使用以下代码块。
 # According to https://github.com/pytorch/pytorch/issues/25457,
+# 根据所链接的 PyTorch 问题讨论，
 # the DLLs need to be copied to avoid memory errors.
+# 需要复制 DLL 文件以避免内存错误。
 if (MSVC)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   add_custom_command(TARGET ${PROJECT_NAME}

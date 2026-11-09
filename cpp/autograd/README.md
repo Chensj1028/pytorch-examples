@@ -1,8 +1,14 @@
 # C++ autograd example
 
+C++ 自动求导示例
+
 `autograd.cpp` contains several examples of doing autograd in PyTorch C++ frontend.
 
+`autograd.cpp` 包含多个使用 PyTorch C++ 前端进行自动求导的示例。
+
 To build the code, run the following commands from your terminal:
+
+在终端执行以下命令构建代码：
 
 ```shell
 $ cd autograd
@@ -16,7 +22,11 @@ where `/path/to/libtorch` should be the path to the unzipped _LibTorch_
 distribution, which you can get from the [PyTorch
 homepage](https://pytorch.org/get-started/locally/).
 
+其中 `/path/to/libtorch` 应替换为解压后的 LibTorch 目录。LibTorch 可从 [PyTorch 官网](https://pytorch.org/get-started/locally/)获取。
+
 Execute the compiled binary to run:
+
+运行编译生成的可执行文件：
 
 ```shell
 $ ./autograd

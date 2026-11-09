@@ -8,6 +8,7 @@ from model import Net
 import numpy as np
 
 # Training settings
+# 训练设置。
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
 parser.add_argument('--input_image', type=str, required=True, help='input image to use')
 parser.add_argument('--model', type=str, required=True, help='model file to use')

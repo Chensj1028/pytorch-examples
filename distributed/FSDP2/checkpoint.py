@@ -33,6 +33,7 @@ def get_latest_checkpoint_folder(path):
                     max_num = num
             except ValueError:
                 pass  # Skip non-numeric folder names
+                # 跳过非数字名称的目录。
     return max_num
 
 
@@ -76,6 +77,7 @@ class Checkpointer:
             )
             sharded_sd[param_name] = nn.Parameter(sharded_tensor)
         # choose `assign=True` since we cannot call `copy_` on meta tensor
+        # 使用 assign=True，因为不能对 meta 张量调用 copy_。
         model.load_state_dict(sharded_sd, strict=False, assign=True)
 
     def load_optim(self, model: FSDPModule, opt: torch.optim.Optimizer):
@@ -118,6 +120,7 @@ class Checkpointer:
                     sharded_tensor = param_state[attr]
                     if isinstance(sharded_tensor, DTensor):
                         # exp_avg is DTensor
+                        # exp_avg 是 DTensor。
                         param_state[attr] = distribute_tensor(
                             full_tensor,
                             sharded_tensor.device_mesh,
@@ -125,6 +128,7 @@ class Checkpointer:
                         )
                     else:
                         # step is plain tensor
+                        # step 是普通张量。
                         param_state[attr] = full_tensor
         opt.load_state_dict(
             {
@@ -176,9 +180,11 @@ class Checkpointer:
             for attr, sharded_tensor in sharded_group.items():
                 if isinstance(sharded_tensor, DTensor):
                     # "exp_avg" in AdamW is `DTensor`
+                    # AdamW 中的 exp_avg 是 DTensor。
                     full_tensor = sharded_tensor.full_tensor()
                 else:
                     # "step" in AdamW is plain tensor
+                    # AdamW 中的 step 是普通张量。
                     full_tensor = sharded_tensor
                 if is_rank_zero:
                     group_state[attr] = full_tensor.cpu()

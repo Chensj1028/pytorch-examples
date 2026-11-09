@@ -22,13 +22,18 @@ class Net(nn.Module):
 
     def forward(self, input):
         # Shape of input is (batch_size,1, 28, 28)
+        # 输入形状为（批大小，1，28，28）。
         # converting shape of input to (batch_size, 28, 28)
+        # 将输入形状转换为（批大小，28，28），
         # as required by RNN when batch_first is set True
+        # 以符合 RNN 在 batch_first=True 时的要求。
         input = input.reshape(-1, 28, 28)
         output, hidden = self.rnn(input)
 
         # RNN output shape is (seq_len, batch, input_size)
+        # 原注释给出的 RNN 输出维度顺序为（序列长度，批大小，输入大小）。
         # Get last output of RNN
+        # 取 RNN 的最后一个输出。
         output = output[:, -1, :]
         output = self.batchnorm(output)
         output = self.dropout1(output)
@@ -66,7 +71,9 @@ def test(args, model, device, test_loader):
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+            # 累加各批次损失。
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            # 获取对数概率最大项的索引。
             correct += pred.eq(target.view_as(pred)).sum().item()
             if args.dry_run:
                 break
@@ -80,6 +87,7 @@ def test(args, model, device, test_loader):
 
 def main():
     # Training settings
+    # 训练设置。
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example using RNN')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')

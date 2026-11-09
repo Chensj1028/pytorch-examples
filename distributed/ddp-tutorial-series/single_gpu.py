@@ -49,7 +49,9 @@ class Trainer:
 
 def load_train_objs():
     train_set = MyTrainDataset(2048)  # load your dataset
+    # 加载数据集。
     model = torch.nn.Linear(20, 1)  # load your model
+    # 加载模型。
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     return train_set, model, optimizer
 
@@ -79,4 +81,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     device = 0  # shorthand for cuda:0
+    # cuda:0 的简写。
     main(device, args.total_epochs, args.save_every, args.batch_size)

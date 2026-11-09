@@ -7,6 +7,7 @@ on:
     branches: [ main ]
   schedule:
     # Every day at 3:00am
+    # 每天凌晨 3:00。
     - cron: '0 3 * * *'
 
 

@@ -26,8 +26,10 @@ class Corpus(object):
 
     def tokenize(self, path):
         """Tokenizes a text file."""
+        # 对文本文件进行分词。
         assert os.path.exists(path)
         # Add words to the dictionary
+        # 将单词加入字典。
         with open(path, 'r', encoding="utf8") as f:
             for line in f:
                 words = line.split() + ['<eos>']
@@ -35,6 +37,7 @@ class Corpus(object):
                     self.dictionary.add_word(word)
 
         # Tokenize file content
+        # 对文件内容进行分词。
         with open(path, 'r', encoding="utf8") as f:
             idss = []
             for line in f:

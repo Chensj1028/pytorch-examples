@@ -2,6 +2,8 @@
 Simple training loop; Boilerplate that could apply to any arbitrary neural network,
 so nothing in this file really has anything to do with GPT specifically.
 """
+# 简单训练循环，可作为任意神经网络的通用框架，
+# 因此此文件中的内容并不专属于 GPT。
 
 from dataclasses import dataclass, asdict
 from collections import OrderedDict
@@ -46,17 +48,21 @@ class Trainer:
     def __init__(self, trainer_config: TrainerConfig, model, optimizer, train_dataset, test_dataset=None):
         self.config = trainer_config
         # set torchrun variables
+        # 设置 torchrun 相关变量。
         self.local_rank = int(os.environ["LOCAL_RANK"])
         self.global_rank = int(os.environ["RANK"])  
         # set device
+        # 设置计算设备。
         self.acc = torch.accelerator.current_accelerator()
         self.device: torch.device = torch.device(f"{self.acc}:{self.local_rank}")
         self.device_type = self.device.type
         # data stuff
+        # 数据相关处理。
         self.train_dataset = train_dataset
         self.train_loader = self._prepare_dataloader(train_dataset)
         self.test_loader = self._prepare_dataloader(test_dataset) if test_dataset else None
         # initialize train states
+        # 初始化训练状态。
         self.epochs_run = 0
         self.model = model.to(self.local_rank)
         self.optimizer = optimizer        
@@ -64,10 +70,12 @@ class Trainer:
         if self.config.use_amp:
             self.scaler = torch.amp.GradScaler(self.device_type)
         # load snapshot if available. only necessary on the first node.
+        # 若有快照则加载；仅第一个节点需要执行。
         if self.config.snapshot_path is None:
             self.config.snapshot_path = "snapshot.pt"
         self._load_snapshot()
         # wrap with DDP. this step will synch model across all the processes.
+        # 用 DDP 包装模型，此操作会在所有进程间同步模型。
         self.model = DDP(self.model, device_ids=[self.local_rank])
         
     def _prepare_dataloader(self, dataset: Dataset):
@@ -127,6 +135,7 @@ class Trainer:
 
     def _save_snapshot(self, epoch):
         # capture snapshot
+        # 获取快照。
         model = self.model
         raw_model = model.module if hasattr(model, "module") else model
         snapshot = Snapshot(
@@ -135,6 +144,7 @@ class Trainer:
             finished_epoch=epoch
         )
         # save snapshot
+        # 保存快照。
         snapshot = asdict(snapshot)
         if self.config.snapshot_path.startswith("s3://"):
             upload_to_s3(snapshot, self.config.snapshot_path)
@@ -150,5 +160,6 @@ class Trainer:
             if self.local_rank == 0 and epoch % self.save_every == 0:
                 self._save_snapshot(epoch)
             # eval run
+            # 执行评估。
             if self.test_loader:
                 self._run_epoch(epoch, self.test_loader, train=False)

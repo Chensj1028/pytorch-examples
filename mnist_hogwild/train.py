@@ -47,7 +47,9 @@ def test_epoch(model, device, data_loader):
         for data, target in data_loader:
             output = model(data.to(device))
             test_loss += F.nll_loss(output, target.to(device), reduction='sum').item() # sum up batch loss
+            # 累加各批次损失。
             pred = output.max(1)[1] # get the index of the max log-probability
+            # 获取对数概率最大项的索引。
             correct += pred.eq(target.to(device)).sum().item()
 
     test_loss /= len(data_loader.dataset)

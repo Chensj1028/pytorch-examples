@@ -28,6 +28,7 @@ class Sequence(nn.Module):
             output = self.linear(h_t2)
             outputs += [output]
         for i in range(future):# if we should predict the future
+        # 是否需要预测未来。
             h_t, c_t = self.lstm1(output, (h_t, c_t))
             h_t2, c_t2 = self.lstm2(h_t, (h_t2, c_t2))
             output = self.linear(h_t2)
@@ -41,21 +42,26 @@ if __name__ == '__main__':
     parser.add_argument('--steps', type=int, default=15, help='steps to run')
     opt = parser.parse_args()
     # set random seed to 0
+    # 将随机种子设为 0。
     np.random.seed(0)
     torch.manual_seed(0)
     # load data and make training set
+    # 加载数据并构造训练集。
     data = torch.load('traindata.pt')
     input = torch.from_numpy(data[3:, :-1])
     target = torch.from_numpy(data[3:, 1:])
     test_input = torch.from_numpy(data[:3, :-1])
     test_target = torch.from_numpy(data[:3, 1:])
     # build the model
+    # 构建模型。
     seq = Sequence()
     seq.double()
     criterion = nn.MSELoss()
     # use LBFGS as optimizer since we can load the whole data to train
+    # 由于可以一次载入全部数据进行训练，因此使用 LBFGS 优化器。
     optimizer = optim.LBFGS(seq.parameters(), lr=0.8)
     #begin to train
+    # 开始训练。
     for i in range(opt.steps):
         print('STEP: ', i)
         def closure():
@@ -67,6 +73,7 @@ if __name__ == '__main__':
             return loss
         optimizer.step(closure)
         # begin to predict, no need to track gradient here
+        # 开始预测，此处无需跟踪梯度。
         with torch.no_grad():
             future = 1000
             pred = seq(test_input, future=future)
@@ -74,6 +81,7 @@ if __name__ == '__main__':
             print('test loss:', loss.item())
             y = pred.detach().numpy()
         # draw the result
+        # 绘制结果。
         plt.figure(figsize=(30,10))
         plt.title('Predict future values for time sequences\n(Dashlines are predicted values)', fontsize=30)
         plt.xlabel('x', fontsize=20)

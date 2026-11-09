@@ -47,11 +47,13 @@ from datetime import datetime
 def get_policies(cfg, rank):
 
     """establish current policies for mixed precision and fsdp wrapping"""
+    # 确定当前混合精度和 FSDP 包装策略。
 
     mixed_precision_policy = None
     wrapping_policy = None
 
     # mixed precision -----
+    # 混合精度。
     if cfg.mixed_precision:
         bfloat_available = bfloat_support()
         if bfloat_available and not cfg.use_fp16:
@@ -112,9 +114,11 @@ def fsdp_main(args):
     torch.cuda.set_device(local_rank)
 
     # Set up FSDP parameters
+    # 设置 FSDP 参数。
     mixed_precision_policy, t5_auto_wrap_policy = get_policies(train_config, rank)
 
     # Apply FSDP wrapping to the model
+    # 对模型应用 FSDP 包装。
     model = FSDP(model,
         auto_wrap_policy=t5_auto_wrap_policy,
         mixed_precision=mixed_precision_policy,
@@ -123,10 +127,12 @@ def fsdp_main(args):
         limit_all_gathers=fsdp_config.limit_all_gathers)
 
     # Enabling this causes https://github.com/pytorch/examples/issues/1210
+    # 启用此设置会触发上方链接中的问题。
     if fsdp_config.fsdp_activation_checkpointing:
         policies.apply_fsdp_checkpointing(model)
 
     # Set up optimizer and scheduler
+    # 设置优化器和学习率调度器。
     optimizer = optim.AdamW(model.parameters(), lr=train_config.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=train_config.gamma)
@@ -197,6 +203,7 @@ def fsdp_main(args):
 
 if __name__ == '__main__':
     # Training settings
+    # 训练设置。
     parser = argparse.ArgumentParser(description='PyTorch T5 FSDP Example')
     parser.add_argument('--batch-size', type=int, default=4, metavar='N',
                         help='input batch size for training (default: 4)')

@@ -30,18 +30,28 @@ class GraphConv(nn.Module):
             W: Learnable weight matrix with shape (F_in, F_out), where F_out is the number of output features per node.
             D: The degree matrix.
     """
+    # 论文 Semi-Supervised Classification with Graph Convolutional Networks 中的图卷积层。
+    # 给定节点输入特征，通过聚合邻居信息更新节点表示：
+    # H' = f(D^(-1/2) * A * D^(-1/2) * H * W)。
+    # H：形状为 (N, F_in) 的输入特征矩阵，N 为节点数，F_in 为每个节点的输入特征数。
+    # A：形状为 (N, N) 的邻接矩阵，表示节点关系。
+    # W：形状为 (F_in, F_out) 的可学习权重矩阵，F_out 为输出特征数；D 为度矩阵。
     def __init__(self, input_dim, output_dim, use_bias=False):
         super(GraphConv, self).__init__()
 
         # Initialize the weight matrix W (in this case called `kernel`)
+        # 初始化权重矩阵 W，此处名为 kernel。
         self.kernel = nn.Parameter(torch.Tensor(input_dim, output_dim))
         nn.init.xavier_normal_(self.kernel) # Initialize the weights using Xavier initialization
+        # 使用 Xavier 方法初始化权重。
 
         # Initialize the bias (if use_bias is True)
+        # 若 use_bias 为 True，则初始化偏置。
         self.bias = None
         if use_bias:
             self.bias = nn.Parameter(torch.Tensor(output_dim))
             nn.init.zeros_(self.bias) # Initialize the bias to zeros
+            # 将偏置初始化为零。
 
     def forward(self, input_tensor, adj_mat):
         """
@@ -54,10 +64,16 @@ class GraphConv(nn.Module):
         Returns:
             torch.Tensor: Output tensor after the graph convolution operation.
         """
+        # 执行图卷积运算。
+        # 参数 input_tensor：节点特征张量；adj_mat：归一化邻接矩阵。
+        # 返回值：图卷积后的输出张量。
 
         support = torch.mm(input_tensor, self.kernel) # Matrix multiplication between input and weight matrix
+        # 将输入与权重矩阵相乘。
         output = torch.spmm(adj_mat, support) # Sparse matrix multiplication between adjacency matrix and support
+        # 对邻接矩阵与 support 执行稀疏矩阵乘法。
         # Add the bias (if bias is not None)
+        # 若 bias 不为 None，则加上偏置。
         if self.bias is not None:
             output = output + self.bias
 
@@ -76,14 +92,19 @@ class GCN(nn.Module):
     The original implementation consists of two stacked graph convolutional layers. The ReLU activation function is 
     applied to the hidden representations, and the Softmax activation function is applied to the output representations.
     """
+    # 论文中的图卷积网络（GCN），用于图结构数据的半监督节点分类。
+    # 通过图卷积层沿图结构传播信息，学习节点表示。
+    # 原始模型由两层图卷积堆叠，隐藏表示使用 ReLU，输出使用 softmax。
     def __init__(self, input_dim, hidden_dim, output_dim, use_bias=True, dropout_p=0.1):
         super(GCN, self).__init__()
 
         # Define the Graph Convolution layers
+        # 定义图卷积层。
         self.gc1 = GraphConv(input_dim, hidden_dim, use_bias=use_bias)
         self.gc2 = GraphConv(hidden_dim, output_dim, use_bias=use_bias)
 
         # Define the dropout layer
+        # 定义 Dropout 层。
         self.dropout = nn.Dropout(dropout_p)
 
     def forward(self, input_tensor, adj_mat):
@@ -99,16 +120,25 @@ class GCN(nn.Module):
         Returns:
             torch.Tensor: Output tensor with shape (N, output_dim), representing the predicted class probabilities for each node.
         """
+        # 执行 GCN 前向传播。
+        # 参数 input_tensor：形状为 (N, input_dim) 的节点特征矩阵；N 为节点数，input_dim 为输入特征数。
+        # 参数 adj_mat：形状为 (N, N) 的归一化邻接矩阵。
+        # 返回值：形状为 (N, output_dim) 的节点分类输出；当前实现为类别的对数概率。
 
         # Perform the first graph convolutional layer
+        # 执行第一个图卷积层。
         x = self.gc1(input_tensor, adj_mat)
         x = F.relu(x) # Apply ReLU activation function
+        # 应用 ReLU 激活函数。
         x = self.dropout(x) # Apply dropout regularization
+        # 应用 Dropout 正则化。
 
         # Perform the second graph convolutional layer
+        # 执行第二个图卷积层。
         x = self.gc2(x, adj_mat)
 
         # Apply log-softmax activation function for classification
+        # 应用 log-softmax 激活函数，进行分类。
         return F.log_softmax(x, dim=1)
 
 
@@ -121,47 +151,75 @@ def load_cora(path='./cora', device='cpu'):
         - Compute the inverse square root of the degree matrix.
         - Multiply the inverse square root of the degree matrix with the adjacency matrix.
     """
+    # 图卷积需要归一化邻接矩阵 D^(-1/2) * A * D^(-1/2)，
+    # 以便聚合时对邻居特征进行适当加权。步骤为：计算度矩阵、计算度的平方根倒数，
+    # 再在邻接矩阵两侧乘以相应的对角矩阵。
 
     # Set the paths to the data files
+    # 设置数据文件路径。
     content_path = os.path.join(path, 'cora.content')
     cites_path = os.path.join(path, 'cora.cites')
 
     # Load data from files
+    # 从文件加载数据。
     content_tensor = np.genfromtxt(content_path, dtype=np.dtype(str))
     cites_tensor = np.genfromtxt(cites_path, dtype=np.int32)
 
     # Process features
+    # 处理特征。
     features = torch.FloatTensor(content_tensor[:, 1:-1].astype(np.int32)) # Extract feature values
+    # 提取特征值。
     scale_vector = torch.sum(features, dim=1) # Compute sum of features for each node
+    # 计算每个节点的特征之和。
     scale_vector = 1 / scale_vector # Compute reciprocal of the sums
+    # 计算各特征和的倒数。
     scale_vector[scale_vector == float('inf')] = 0 # Handle division by zero cases
+    # 处理除零情况。
     scale_vector = torch.diag(scale_vector).to_sparse() # Convert the scale vector to a sparse diagonal matrix
+    # 将缩放向量转换为稀疏对角矩阵。
     features = scale_vector @ features # Scale the features using the scale vector
+    # 使用缩放向量缩放特征。
 
     # Process labels
+    # 处理标签。
     classes, labels = np.unique(content_tensor[:, -1], return_inverse=True) # Extract unique classes and map labels to indices
+    # 提取不同类别，并将标签映射为索引。
     labels = torch.LongTensor(labels) # Convert labels to a tensor
+    # 将标签转换为张量。
 
     # Process adjacency matrix
+    # 处理邻接矩阵。
     idx = content_tensor[:, 0].astype(np.int32) # Extract node indices
+    # 提取节点索引。
     idx_map = {id: pos for pos, id in enumerate(idx)} # Create a dictionary to map indices to positions
+    # 创建从索引到位置的映射字典。
 
     # Map node indices to positions in the adjacency matrix
+    # 将节点索引映射到邻接矩阵中的位置。
     edges = np.array(
         list(map(lambda edge: [idx_map[edge[0]], idx_map[edge[1]]], 
             cites_tensor)), dtype=np.int32)
 
     V = len(idx) # Number of nodes
+    # 节点数量。
     E = edges.shape[0] # Number of edges
+    # 边数量。
     adj_mat = torch.sparse_coo_tensor(edges.T, torch.ones(E), (V, V), dtype=torch.int64) # Create the initial adjacency matrix as a sparse tensor
+    # 以稀疏张量创建初始邻接矩阵。
     adj_mat = torch.eye(V) + adj_mat # Add self-loops to the adjacency matrix
+    # 向邻接矩阵添加自环。
 
     degree_mat = torch.sum(adj_mat, dim=1) # Compute the sum of each row in the adjacency matrix (degree matrix)
+    # 计算邻接矩阵各行之和，得到各节点的度。
     degree_mat = torch.sqrt(1 / degree_mat) # Compute the reciprocal square root of the degrees
+    # 计算节点度的平方根倒数。
     degree_mat[degree_mat == float('inf')] = 0 # Handle division by zero cases
+    # 处理除零情况。
     degree_mat = torch.diag(degree_mat).to_sparse() # Convert the degree matrix to a sparse diagonal matrix
+    # 将度矩阵转换为稀疏对角矩阵。
 
     adj_mat = degree_mat @ adj_mat @ degree_mat # Apply the renormalization trick
+    # 应用重归一化技巧。
 
     return features.to_sparse().to(device), labels.to(device), adj_mat.to_sparse().to(device)
 
@@ -171,18 +229,22 @@ def train_iter(epoch, model, optimizer, criterion, input, target, mask_train, ma
     optimizer.zero_grad()
 
     # Forward pass
+    # 前向传播。
     output = model(*input) 
     loss = criterion(output[mask_train], target[mask_train]) # Compute the loss using the training mask
+    # 使用训练掩码计算损失。
 
     loss.backward()
     optimizer.step()
 
     # Evaluate the model performance on training and validation sets
+    # 在训练集和验证集上评估模型性能。
     loss_train, acc_train = test(model, criterion, input, target, mask_train)
     loss_val, acc_val = test(model, criterion, input, target, mask_val)
 
     if epoch % print_every == 0:
         # Print the training progress at specified intervals
+        # 按指定间隔打印训练进度。
         print(f'Epoch: {epoch:04d} ({(time.time() - start_t):.4f}s) loss_train: {loss_train:.4f} acc_train: {acc_train:.4f} loss_val: {loss_val:.4f} acc_val: {acc_val:.4f}')
 
 

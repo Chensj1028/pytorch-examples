@@ -1,21 +1,33 @@
 BSD 3-Clause License
 
+BSD 三条款许可证
+
 Copyright (c) 2017, Pytorch contributors
 All rights reserved.
+
+版权所有 © 2017 PyTorch 贡献者，保留所有权利。
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
+允许以源码或二进制形式重新分发和使用本软件，无论是否修改，但须满足以下条件：
+
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
+
+  重新分发源码时，必须保留上述版权声明、本条件列表和以下免责声明。
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
 
+  以二进制形式重新分发时，必须在随附文档和/或其他材料中重现上述版权声明、本条件列表和以下免责声明。
+
 * Neither the name of the copyright holder nor the names of its
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
+
+  未经事先明确书面许可，不得使用版权持有者或贡献者的名称，为本软件衍生产品背书或推广。
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -27,3 +39,7 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+本软件由版权持有者和贡献者按“原样”提供，不提供任何明示或暗示的保证，包括但不限于适销性及特定用途适用性的暗示保证。无论损害如何产生、基于何种责任理论，无论合同责任、严格责任或侵权责任（包括疏忽或其他），版权持有者或贡献者均不对使用本软件引起的任何直接、间接、附带、特殊、惩罚性或后果性损害承担责任，包括但不限于购买替代商品或服务、使用损失、数据损失、利润损失或业务中断；即使已被告知可能发生此类损害亦然。
+
+中文译文仅便于阅读，许可条款以英文原文为准。

@@ -1,17 +1,38 @@
 # ImageNet training in PyTorch
 
+使用 PyTorch 在 ImageNet 上训练
+
 This implements training of popular model architectures, such as ResNet, AlexNet, and VGG on the ImageNet dataset.
+
+本示例在 ImageNet 数据集上训练 ResNet、AlexNet、VGG 等常见模型架构。
 
 ## Requirements
 
+环境与数据准备
+
 - Install PyTorch ([pytorch.org](http://pytorch.org))
+
+  安装 PyTorch（[pytorch.org](http://pytorch.org)）。
+
 - `pip install -r requirements.txt`
+
+  执行 `pip install -r requirements.txt`。
+
 - Download the ImageNet dataset from http://www.image-net.org/
+
+  从 http://www.image-net.org/ 下载 ImageNet 数据集。
+
   - Then, move and extract the training and validation images to labeled subfolders, using [the following shell script](extract_ILSVRC.sh)
+
+    使用[解压脚本](extract_ILSVRC.sh)，将训练和验证图片移动、解压到按类别组织的子目录中。
 
 ## Training
 
+训练
+
 To train a model, run `main.py` with the desired model architecture and the path to the ImageNet dataset:
+
+运行 `main.py`，指定模型架构和 ImageNet 数据集路径：
 
 ```bash
 python main.py -a resnet18 [imagenet-folder with train and val folders]
@@ -19,13 +40,19 @@ python main.py -a resnet18 [imagenet-folder with train and val folders]
 
 The default learning rate schedule starts at 0.1 and decays by a factor of 10 every 30 epochs. This is appropriate for ResNet and models with batch normalization, but too high for AlexNet and VGG. Use 0.01 as the initial learning rate for AlexNet or VGG:
 
+默认学习率从 0.1 开始，每训练 30 轮缩小为原来的十分之一。这适用于 ResNet 和使用批归一化的模型，但对 AlexNet、VGG 来说偏大。训练 AlexNet 或 VGG 时，初始学习率应使用 0.01：
+
 ```bash
 python main.py -a alexnet --lr 0.01 [imagenet-folder with train and val folders]
 ```
 
 ## Use Dummy Data
 
+使用模拟数据
+
 ImageNet dataset is large and time-consuming to download. To get started quickly, run `main.py` using dummy data by "--dummy". It's also useful for training speed benchmark. Note that the loss or accuracy is useless in this case.
+
+ImageNet 数据集体积较大，下载需要时间。可以给 `main.py` 添加 `--dummy`，使用模拟数据快速体验，也可用来测试训练速度。此时损失和准确率没有实际评价意义。
 
 ```bash
 python main.py -a resnet18 --dummy
@@ -33,11 +60,19 @@ python main.py -a resnet18 --dummy
 
 ## Multi-processing Distributed Data Parallel Training
 
+多进程分布式数据并行训练
+
 If running on CUDA, you should always use the NCCL backend for multi-processing distributed training since it currently provides the best distributed training performance.
+
+按照原版说明，在 CUDA 上进行多进程分布式训练时，应使用 NCCL 后端以获得较好的分布式训练性能。
 
 For XPU multiprocessing is not supported as of PyTorch 2.6.
 
+原版同时注明：截至 PyTorch 2.6，XPU 尚不支持这里的多进程方式。
+
 ### Single node, multiple GPUs:
+
+单节点、多 GPU
 
 ```bash
 python main.py -a resnet50 --dist-url 'tcp://127.0.0.1:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 1 --rank 0 [imagenet-folder with train and val folders]
@@ -45,7 +80,11 @@ python main.py -a resnet50 --dist-url 'tcp://127.0.0.1:FREEPORT' --dist-backend 
 
 ### Multiple nodes:
 
+多节点
+
 Node 0:
+
+节点 0：
 
 ```bash
 python main.py -a resnet50 --dist-url 'tcp://IP_OF_NODE0:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 0 [imagenet-folder with train and val folders]
@@ -53,11 +92,15 @@ python main.py -a resnet50 --dist-url 'tcp://IP_OF_NODE0:FREEPORT' --dist-backen
 
 Node 1:
 
+节点 1：
+
 ```bash
 python main.py -a resnet50 --dist-url 'tcp://IP_OF_NODE0:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 1 [imagenet-folder with train and val folders]
 ```
 
 ## Usage
+
+命令行用法
 
 ```bash
 usage: main.py [-h] [-a ARCH] [-j N] [--epochs N] [--start-epoch N] [-b N] [--lr LR] [--momentum M] [--wd W] [-p N] [--resume PATH] [-e] [--pretrained] [--world-size WORLD_SIZE] [--rank RANK]

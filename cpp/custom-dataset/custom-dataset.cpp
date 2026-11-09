@@ -14,6 +14,7 @@ struct Options {
   size_t iterations = 10;
   size_t log_interval = 20;
   // path must end in delimiter
+  // 路径末尾必须带有分隔符。
   std::string datasetPath = "./dataset/";
   std::string infoFilePath = "info.txt";
   torch::DeviceType device = torch::kCPU;

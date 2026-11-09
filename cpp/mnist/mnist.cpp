@@ -7,18 +7,23 @@
 #include <vector>
 
 // Where to find the MNIST dataset.
+// MNIST 数据集所在位置。
 const char* kDataRoot = "./data";
 
 // The batch size for training.
+// 训练批大小。
 const int64_t kTrainBatchSize = 64;
 
 // The batch size for testing.
+// 测试批大小。
 const int64_t kTestBatchSize = 1000;
 
 // The number of epochs to train.
+// 训练轮数。
 const int64_t kNumberOfEpochs = 10;
 
 // After how many batches to log a new update with the loss value.
+// 每隔多少个批次输出一次包含损失值的进度日志。
 const int64_t kLogInterval = 10;
 
 struct Net : torch::nn::Module {

@@ -115,6 +115,7 @@ def train(args):
                 transformer.to(device).train()
 
     # save model
+    # 保存模型。
     transformer.eval().cpu()
     timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
     save_model_filename = f"epoch_{args.epochs}_{timestamp}_{args.content_weight}_{args.style_weight}.model"
@@ -147,6 +148,7 @@ def stylize(args):
             style_model = TransformerNet()
             state_dict = torch.load(args.model)
             # remove saved deprecated running_* keys in InstanceNorm from the checkpoint
+            # 从检查点中移除 InstanceNorm 已弃用的 running_* 状态键。
             for k in list(state_dict.keys()):
                 if re.search(r'in\d+\.running_(mean|var)$', k):
                     del state_dict[k]
@@ -167,6 +169,7 @@ def stylize_onnx(content_image, args):
     """
     Read ONNX model and run it using onnxruntime
     """
+    # 读取 ONNX 模型，并使用 onnxruntime 运行。
 
     assert not args.export_onnx
 

@@ -124,13 +124,18 @@ def main():
 
     if args.multiprocessing_distributed:
         # Since we have ngpus_per_node processes per node, the total world_size
+        # 由于每个节点有 ngpus_per_node 个进程，全局 world_size
         # needs to be adjusted accordingly
+        # 也需要相应调整。
         args.world_size = ngpus_per_node * args.world_size
         # Use torch.multiprocessing.spawn to launch distributed processes: the
+        # 使用 torch.multiprocessing.spawn 启动分布式进程，
         # main_worker process function
+        # 进程执行函数为 main_worker。
         mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
     else:
         # Simply call main_worker function
+        # 直接调用 main_worker 函数。
         main_worker(args.gpu, ngpus_per_node, args)
 
 
@@ -152,11 +157,14 @@ def main_worker(gpu, ngpus_per_node, args):
             args.rank = int(os.environ["RANK"])
         if args.multiprocessing_distributed:
             # For multiprocessing distributed training, rank needs to be the
+            # 多进程分布式训练中，rank 必须为
             # global rank among all the processes
+            # 所有进程中的全局编号。
             args.rank = args.rank * ngpus_per_node + gpu
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
+    # 创建模型。
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
         model = models.__dict__[args.arch](pretrained=True)
@@ -168,25 +176,34 @@ def main_worker(gpu, ngpus_per_node, args):
         print('using CPU, this will be slow')
     elif args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
+        # 多进程分布式场景下，DistributedDataParallel 构造时
         # should always set the single device scope, otherwise,
+        # 应始终指定单个设备的范围，否则
         # DistributedDataParallel will use all available devices.
+        # 会使用所有可用设备。
         if device.type == 'cuda':
             if args.gpu is not None:
                 torch.cuda.set_device(args.gpu)
                 model.cuda(device)
                 # When using a single GPU per process and per
+                # 每个进程、每个 DDP 实例
                 # DistributedDataParallel, we need to divide the batch size
+                # 仅使用一个 GPU 时，需要根据
                 # ourselves based on the total number of GPUs of the current node.
+                # 当前节点的 GPU 总数自行调整批大小。
                 args.batch_size = int(args.batch_size / ngpus_per_node)
                 args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
                 model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
             else:
                 model.cuda()
                 # DistributedDataParallel will divide and allocate batch_size to all
+                # 原注释说明：未设置 device_ids 时，DDP 将批大小分配到所有
                 # available GPUs if device_ids are not set
+                # 可用 GPU；具体行为应以当前框架版本及配置为准。
                 model = torch.nn.parallel.DistributedDataParallel(model)
     elif device.type == 'cuda':
         # DataParallel will divide and allocate batch_size to all available GPUs
+        # DataParallel 会将批次拆分并分配到所有可用 GPU。
         if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
             model.features = torch.nn.DataParallel(model.features)
             model.cuda()
@@ -197,6 +214,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
 
     # define loss function (criterion), optimizer, and learning rate scheduler
+    # 定义损失函数、优化器和学习率调度器。
     criterion = nn.CrossEntropyLoss().to(device)
 
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
@@ -204,9 +222,11 @@ def main_worker(gpu, ngpus_per_node, args):
                                 weight_decay=args.weight_decay)
     
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    # 每经过 30 轮，将学习率在初始值基础上按 10 倍衰减。
     scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
     
     # optionally resume from a checkpoint
+    # 可选：从检查点恢复。
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -214,12 +234,14 @@ def main_worker(gpu, ngpus_per_node, args):
                 checkpoint = torch.load(args.resume)
             else:
                 # Map model to be loaded to specified single gpu.
+                # 将待加载模型映射到指定的单个 GPU。
                 loc = f'{device.type}:{args.gpu}'
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
             if args.gpu is not None:
                 # best_acc1 may be from a checkpoint from a different GPU
+                # best_acc1 可能来自另一个 GPU 保存的检查点。
                 best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
@@ -231,6 +253,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
 
     # Data loading code
+    # 数据加载代码。
     if args.dummy:
         print("=> Dummy data is used!")
         train_dataset = datasets.FakeData(1281167, (3, 224, 224), 1000, transforms.ToTensor())
@@ -283,14 +306,17 @@ def main_worker(gpu, ngpus_per_node, args):
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
+        # 训练一轮。
         train(train_loader, model, criterion, optimizer, epoch, device, args)
 
         # evaluate on validation set
+        # 在验证集上评估。
         acc1 = validate(val_loader, model, criterion, args)
         
         scheduler.step()
         
         # remember best acc@1 and save checkpoint
+        # 记录最佳 top-1 准确率，并保存检查点。
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
@@ -321,33 +347,40 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
+    # 切换到训练模式。
     model.train()
 
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
         # measure data loading time
+        # 测量数据加载时间。
         data_time.update(time.time() - end)
 
         # move data to the same device as model
+        # 将数据移动到与模型相同的设备。
         images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
         # compute output
+        # 计算输出。
         output = model(images)
         loss = criterion(output, target)
 
         # measure accuracy and record loss
+        # 计算准确率并记录损失。
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
         losses.update(loss.item(), images.size(0))
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
 
         # compute gradient and do SGD step
+        # 计算梯度，并执行一次 SGD 更新。
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         # measure elapsed time
+        # 测量已用时间。
         batch_time.update(time.time() - end)
         end = time.time()
 
@@ -380,16 +413,19 @@ def validate(val_loader, model, criterion, args):
                         target = target.to(device)
 
                 # compute output
+                # 计算输出。
                 output = model(images)
                 loss = criterion(output, target)
 
                 # measure accuracy and record loss
+                # 计算准确率并记录损失。
                 acc1, acc5 = accuracy(output, target, topk=(1, 5))
                 losses.update(loss.item(), images.size(0))
                 top1.update(acc1[0], images.size(0))
                 top5.update(acc5[0], images.size(0))
 
                 # measure elapsed time
+                # 测量已用时间。
                 batch_time.update(time.time() - end)
                 end = time.time()
 
@@ -406,6 +442,7 @@ def validate(val_loader, model, criterion, args):
         prefix='Test: ')
 
     # switch to evaluate mode
+    # 切换到评估模式。
     model.eval()
 
     run_validate(val_loader)
@@ -439,6 +476,7 @@ class Summary(Enum):
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
+    # 计算并保存平均值和当前值。
     def __init__(self, name, use_accel, fmt=':f', summary_type=Summary.AVERAGE):
         self.name = name
         self.use_accel = use_accel
@@ -511,6 +549,7 @@ class ProgressMeter(object):
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
+    # 对给定的各个 k，计算预测前 k 个类别的准确率。
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)

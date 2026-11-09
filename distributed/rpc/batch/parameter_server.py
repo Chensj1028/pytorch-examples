@@ -13,6 +13,7 @@ from torch import optim
 import torchvision
 
 # Suppress deprecated ProcessGroup warning
+# 屏蔽已弃用的 ProcessGroup 警告。
 warnings.filterwarnings("ignore", message="You are using a Backend.*ProcessGroup")
 
 
@@ -121,6 +122,7 @@ def run(rank, world_size):
     os.environ['MASTER_PORT'] = '29500'
     
     # Initialize the process group first
+    # 先初始化进程组。
     dist.init_process_group(
         backend="gloo",
         rank=rank,
@@ -139,6 +141,7 @@ def run(rank, world_size):
             rpc_backend_options=options
         )
         # trainer passively waiting for ps to kick off training iterations
+        # 训练进程被动等待参数服务器启动训练迭代。
     else:
         rpc.init_rpc(
             "ps",
@@ -149,6 +152,7 @@ def run(rank, world_size):
         run_ps([f"trainer{r}" for r in range(1, world_size)])
 
     # block until all rpcs finish
+    # 阻塞等待所有 RPC 完成。
     rpc.shutdown()
     dist.destroy_process_group()
 

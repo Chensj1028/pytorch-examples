@@ -24,6 +24,8 @@ def apply_fsdp_checkpointing(model):
     """apply activation checkpointing to model
     returns None as model is updated directly
     """
+    # 对模型应用激活检查点。
+    # 直接更新模型，因此返回 None。
     print(f"--> applying fdsp activation checkpointing...")
 
     apply_activation_checkpointing(

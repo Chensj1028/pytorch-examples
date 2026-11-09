@@ -9,6 +9,7 @@ from utils import inspect_mixed_precision, inspect_model
 
 def verify_min_gpu_count(min_gpus: int = 2) -> bool:
     """ verification that we have at least 2 gpus to run dist examples """
+    # 检查至少有两个 GPU，以运行分布式示例。
     has_gpu = torch.accelerator.is_available()
     gpu_count = torch.accelerator.device_count()
     return has_gpu and gpu_count >= min_gpus

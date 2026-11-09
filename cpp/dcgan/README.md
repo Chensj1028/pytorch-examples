@@ -1,13 +1,23 @@
 # DCGAN Example with the PyTorch C++ Frontend
 
+使用 PyTorch C++ 前端训练 DCGAN
+
 This folder contains an example of training a DCGAN to generate MNIST digits
 with the PyTorch C++ frontend.
 
+本目录展示如何通过 PyTorch C++ 前端训练 DCGAN，生成 MNIST 手写数字图片。
+
 The entire training code is contained in `dcgan.cpp`.
+
+完整训练代码位于 `dcgan.cpp`。
 
 You can find the commands to install argparse [here](https://github.com/pytorch/examples/blob/main/.github/workflows/main_cpp.yml#L34).
 
+安装 argparse 的命令见[这里](https://github.com/pytorch/examples/blob/main/.github/workflows/main_cpp.yml#L34)。
+
 To build the code, run the following commands from your terminal:
+
+在终端执行以下命令构建代码：
 
 ```shell
 $ cd dcgan
@@ -21,7 +31,11 @@ where `/path/to/libtorch` should be the path to the unzipped _LibTorch_
 distribution, which you can get from the [PyTorch
 homepage](https://pytorch.org/get-started/locally/).
 
+其中 `/path/to/libtorch` 应替换为解压后的 LibTorch 目录。LibTorch 可从 [PyTorch 官网](https://pytorch.org/get-started/locally/)获取。
+
 Execute the compiled binary to train the model:
+
+运行编译生成的可执行文件来训练模型：
 
 ```shell
 $ ./dcgan
@@ -50,15 +64,21 @@ $ ./dcgan
 
 We can also specify the `--epochs` to change the number of epochs to train as follows:
 
+通过 `--epochs` 指定训练轮数：
+
 ```shell
 $ ./dcgan --epochs 10
 ```
+
 Without specifying the `--epochs` flag, the default number of epochs to train is 30.
 
+未指定 `--epochs` 时，默认训练 30 轮。
 
 The training script periodically generates image samples. Use the
 `display_samples.py` script situated in this folder to generate a plot image.
 For example:
+
+训练脚本会定期生成图片样本。使用本目录的 `display_samples.py` 将样本绘制成图片，例如：
 
 ```shell
 $ python display_samples.py -i dcgan-sample-10.pt

@@ -43,6 +43,7 @@ def download(destination_path, url, quiet):
         finally:
             if not quiet:
                 # Just a newline.
+                # 仅输出一个换行。
                 print()
 
 

@@ -10,6 +10,7 @@ g_gigabyte = 1024**3
 
 def setup():
     # initialize the process group
+    # 初始化进程组。
     dist.init_process_group("nccl")
 
 
@@ -20,6 +21,8 @@ def get_date_of_run():
     """create date and time for file save uniqueness
     example: 2022-05-07-08:31:12_PM'
     """
+    # 生成日期时间，保证保存文件名唯一。
+    # 例如：2022-05-07-08:31:12_PM。
     date_of_run = datetime.now().strftime("%Y-%m-%d-%I:%M:%S_%p")
     print(f"--> current date and time of run = {date_of_run}")
     return date_of_run
@@ -28,6 +31,7 @@ def get_date_of_run():
 
 def format_metrics_to_gb(item):
     """quick function to format numbers to gigabyte and round to 4 digit precision"""
+    # 将数值转换为 GB，并保留四位小数的简短函数。
     metric_num = item / g_gigabyte
     metric_num = round(metric_num, ndigits=4)
     return metric_num
@@ -83,6 +87,7 @@ def validation(model, rank, world_size, val_loader):
                 batch[key] = batch[key].to(local_rank)
             output = model(input_ids=batch["source_ids"],attention_mask=batch["source_mask"],labels=batch["target_ids"])
             fsdp_loss[0] += output["loss"].item()  # sum up batch loss
+            # 累加各批次损失。
             fsdp_loss[1] += len(batch)
 
             if rank==0:

@@ -10,6 +10,7 @@ from torchvision import datasets, transforms
 from train import train, test
 
 # Training settings
+# 训练设置。
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
@@ -87,12 +88,14 @@ if __name__ == '__main__':
 
     model = Net().to(device)
     model.share_memory() # gradients are allocated lazily, so they are not shared here
+    # 梯度是延迟分配的，因此这里不会共享梯度。
 
     processes = []
     for rank in range(args.num_processes):
         p = mp.Process(target=train, args=(rank, args, model, device,
                                            dataset1, kwargs))
         # We first train the model across `num_processes` processes
+        # 先使用 num_processes 个进程训练模型。
         p.start()
         processes.append(p)
     for p in processes:
@@ -102,4 +105,5 @@ if __name__ == '__main__':
         torch.save(model.state_dict(), "MNIST_hogwild.pt")
 
     # Once training is complete, we can test the model
+    # 训练完成后即可测试模型。
     test(args, model, device, dataset2, kwargs)

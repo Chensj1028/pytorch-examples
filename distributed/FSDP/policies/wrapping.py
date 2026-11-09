@@ -1,4 +1,5 @@
 # holds various wrapping policies for fsdp
+# 保存 FSDP 的各种包装策略。
 
 
 import torch.distributed as dist
@@ -35,7 +36,10 @@ def get_t5_wrapper():
     """we register our main layer class and use the fsdp transformer wrapping policy
     ensures embedding layers are in the root fsdp unit for shared access and that fsdp units map to transformer layers
     """
+    # 注册主要层的类，并使用 FSDP 的 Transformer 包装策略。
+    # 确保嵌入层位于根 FSDP 单元中以便共享访问，同时使 FSDP 单元与 Transformer 层对应。
     # ====   use new transformer wrapper
+    # 使用新的 Transformer 包装器。
 
     t5_auto_wrap_policy = functools.partial(
         transformer_auto_wrap_policy,

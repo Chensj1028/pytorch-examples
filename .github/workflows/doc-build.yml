@@ -10,6 +10,7 @@ jobs:
   build_docs_job:
     runs-on: ubuntu-latest
     # Grant write permission here so that the doc can be pushed to gh-pages branch
+    # 在此授予写入权限，以便将文档推送到 gh-pages 分支。
     permissions:
       contents: write
     strategy:
@@ -31,4 +32,6 @@ jobs:
       with:
           ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages # The branch the action should deploy to.
+          # 此 Action 的部署目标分支。
           FOLDER: ./docs/build/html # The folder the action should deploy. 
+          # 此 Action 要部署的目录。

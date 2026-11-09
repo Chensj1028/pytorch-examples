@@ -12,6 +12,7 @@ class fsdp_config:
     limit_all_gathers: bool=True
     sharding_strategy: ShardingStrategy = ShardingStrategy.FULL_SHARD #HYBRID_SHARD, SHARD_GRAD_OP
     checkpoint_type: StateDictType = StateDictType.FULL_STATE_DICT # alternatively can use SHARDED_STATE_DICT to avoid OOMs
+    # 也可以使用 SHARDED_STATE_DICT，避免内存不足（OOM）。
     save_optimizer: bool=False
     
     

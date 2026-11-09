@@ -1,6 +1,9 @@
 # This code is based on the implementation of Mohammad Pezeshki available at
+# 此代码基于 Mohammad Pezeshki 的实现，原实现位于
 # https://github.com/mohammadpz/pytorch_forward_forward and licensed under the MIT License.
+# 上方 GitHub 仓库，并采用 MIT 许可证。
 # Modifications/Improvements to the original code have been made by Vivek V Patel.
+# Vivek V Patel 对原代码进行了修改和改进。
 
 import argparse
 import torch

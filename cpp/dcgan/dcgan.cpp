@@ -5,25 +5,33 @@
 #include <iostream>
 
 // The size of the noise vector fed to the generator.
+// 输入生成器的噪声向量大小。
 const int64_t kNoiseSize = 100;
 
 // The batch size for training.
+// 训练批大小。
 const int64_t kBatchSize = 64;
 
 // Where to find the MNIST dataset.
+// MNIST 数据集所在位置。
 const char* kDataFolder = "./data";
 
 // After how many batches to create a new checkpoint periodically.
+// 每隔多少个批次定期创建一个检查点。
 const int64_t kCheckpointEvery = 200;
 
 // How many images to sample at every checkpoint.
+// 每次保存检查点时生成的图片数量。
 const int64_t kNumberOfSamplesPerCheckpoint = 10;
 
 // Set to `true` to restore models and optimizers from previously saved
+// 设为 true 时，从之前保存的
 // checkpoints.
+// 检查点中恢复模型和优化器。
 const bool kRestoreFromCheckpoint = false;
 
 // After how many batches to log a new update with the loss value.
+// 每隔多少个批次输出一次包含损失值的进度日志。
 const int64_t kLogInterval = 10;
 
 using namespace torch;
@@ -49,6 +57,7 @@ struct DCGANGeneratorImpl : nn::Module {
                   .bias(false))
  {
    // register_module() is needed if we want to use the parameters() method later on
+   // 如果之后要使用 parameters() 方法，就需要调用 register_module()。
    register_module("conv1", conv1);
    register_module("conv2", conv2);
    register_module("conv3", conv3);
@@ -75,18 +84,22 @@ TORCH_MODULE(DCGANGenerator);
 nn::Sequential create_discriminator() {
     return nn::Sequential(
      // Layer 1
+     // 第 1 层。
      nn::Conv2d(nn::Conv2dOptions(1, 64, 4).stride(2).padding(1).bias(false)),
      nn::LeakyReLU(nn::LeakyReLUOptions().negative_slope(0.2)),
      // Layer 2
+     // 第 2 层。
      nn::Conv2d(nn::Conv2dOptions(64, 128, 4).stride(2).padding(1).bias(false)),
      nn::BatchNorm2d(128),
      nn::LeakyReLU(nn::LeakyReLUOptions().negative_slope(0.2)),
      // Layer 3
+     // 第 3 层。
      nn::Conv2d(
          nn::Conv2dOptions(128, 256, 4).stride(2).padding(1).bias(false)),
      nn::BatchNorm2d(256),
      nn::LeakyReLU(nn::LeakyReLUOptions().negative_slope(0.2)),
      // Layer 4
+     // 第 4 层。
      nn::Conv2d(nn::Conv2dOptions(256, 1, 3).stride(1).padding(0).bias(false)),
      nn::Sigmoid());
 }
@@ -105,6 +118,7 @@ int main(int argc, const char* argv[]) {
     std::exit(1);
   }
   // The number of epochs to train, default value is 30.
+  // 训练轮数，默认值为 30。
   const int64_t kNumberOfEpochs = parser.get<int64_t>("--epochs");
   std::cout << "Traning with number of epochs: " << kNumberOfEpochs
             << std::endl;
@@ -112,6 +126,7 @@ int main(int argc, const char* argv[]) {
   torch::manual_seed(1);
 
   // Create the device we pass around based on whether CUDA is available.
+  // 根据 CUDA 是否可用，创建后续使用的计算设备。
   torch::Device device(torch::kCPU);
   if (torch::cuda::is_available()) {
     std::cout << "CUDA is available! Training on GPU." << std::endl;
@@ -125,6 +140,7 @@ int main(int argc, const char* argv[]) {
   discriminator->to(device);
 
   // Assume the MNIST dataset is available under `kDataFolder`;
+  // 假设 MNIST 数据集位于 kDataFolder 下。
   auto dataset = torch::data::datasets::MNIST(kDataFolder)
                      .map(torch::data::transforms::Normalize<>(0.5, 0.5))
                      .map(torch::data::transforms::Stack<>());
@@ -153,6 +169,7 @@ int main(int argc, const char* argv[]) {
     int64_t batch_index = 0;
     for (const torch::data::Example<>& batch : *data_loader) {
       // Train discriminator with real images.
+      // 使用真实图片训练判别器。
       discriminator->zero_grad();
       torch::Tensor real_images = batch.data.to(device);
       torch::Tensor real_labels =
@@ -163,6 +180,7 @@ int main(int argc, const char* argv[]) {
       d_loss_real.backward();
 
       // Train discriminator with fake images.
+      // 使用生成的假图片训练判别器。
       torch::Tensor noise =
           torch::randn({batch.data.size(0), kNoiseSize, 1, 1}, device);
       torch::Tensor fake_images = generator->forward(noise);
@@ -176,6 +194,7 @@ int main(int argc, const char* argv[]) {
       discriminator_optimizer.step();
 
       // Train generator.
+      // 训练生成器。
       generator->zero_grad();
       fake_labels.fill_(1);
       fake_output = discriminator->forward(fake_images).reshape(fake_labels.sizes());
@@ -197,12 +216,14 @@ int main(int argc, const char* argv[]) {
 
       if (batch_index % kCheckpointEvery == 0) {
         // Checkpoint the model and optimizer state.
+        // 保存模型和优化器状态的检查点。
         torch::save(generator, "generator-checkpoint.pt");
         torch::save(generator_optimizer, "generator-optimizer-checkpoint.pt");
         torch::save(discriminator, "discriminator-checkpoint.pt");
         torch::save(
             discriminator_optimizer, "discriminator-optimizer-checkpoint.pt");
         // Sample the generator and save the images.
+        // 从生成器采样并保存图片。
         torch::Tensor samples = generator->forward(torch::randn(
             {kNumberOfSamplesPerCheckpoint, kNoiseSize, 1, 1}, device));
         torch::save(
