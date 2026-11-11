@@ -81,6 +81,7 @@ function dcgan() {
 }
 
 function exercises() {
+  uv run 01_linear.py || error "linear exercise failed"
   uv run 02_tensor.py || error "tensor exercise failed"
 }
 
